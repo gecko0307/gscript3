@@ -406,50 +406,59 @@ class GsVirtualMachine: GsObject
                     }
                     else
                     {
-                        string funcName = func.get!string;
-                        if (funcName in jumpTable)
+                        if (func.type is typeid(string))
                         {
-                            callStack[cp] = ip; // Push the current instruction pointer onto the call stack
-                            // Push a new call frame
-                            cp++;
-                            callFrame = &callFrames[cp];
-                            for(size_t i = 0; i < callFrame.parameters.length; i++)
+                            string funcName = func.get!string;
+                            if (funcName in jumpTable)
                             {
-                                if (i < numParams)
-                                    callFrame.parameters[numParams - 1 - i] = pop();
+                                callStack[cp] = ip; // Push the current instruction pointer onto the call stack
+                                // Push a new call frame
+                                cp++;
+                                callFrame = &callFrames[cp];
+                                for(size_t i = 0; i < callFrame.parameters.length; i++)
+                                {
+                                    if (i < numParams)
+                                        callFrame.parameters[numParams - 1 - i] = pop();
+                                    else
+                                        callFrame.parameters[i] = Variant.init;
+                                }
+                                callFrame.numParameters = numParams;
+                                
+                                ip = jumpTable[funcName]; // Jump to the function's starting instruction
+                                
+                                break;
+                            }
+                            else if (funcName in globals)
+                            {
+                                auto nativeFunc = globals[funcName];
+                                
+                                if (nativeFunc.type is typeid(GsNativeMethod))
+                                {
+                                    nativeMethod = nativeFunc.get!GsNativeMethod();
+                                    useNativeMethod = true;
+                                }
+                                else if (nativeFunc.type is typeid(GsNativeFunc))
+                                {
+                                    nativeFuncPtr = nativeFunc.get!GsNativeFunc();
+                                    useNativeFunc = true;
+                                }
                                 else
-                                    callFrame.parameters[i] = Variant.init;
-                            }
-                            callFrame.numParameters = numParams;
-                            
-                            ip = jumpTable[funcName]; // Jump to the function's starting instruction
-                            
-                            break;
-                        }
-                        else if (funcName in globals)
-                        {
-                            auto nativeFunc = globals[funcName];
-                            
-                            if (nativeFunc.type is typeid(GsNativeMethod))
-                            {
-                                nativeMethod = nativeFunc.get!GsNativeMethod();
-                                useNativeMethod = true;
-                            }
-                            else if (nativeFunc.type is typeid(GsNativeFunc))
-                            {
-                                nativeFuncPtr = nativeFunc.get!GsNativeFunc();
-                                useNativeFunc = true;
+                                {
+                                    writeln("Fatality: unsupported native call for function \"%s\"", funcName);
+                                    finalize();
+                                    return;
+                                }
                             }
                             else
                             {
-                                writeln("Fatality: unsupported native call for function: ", funcName);
+                                writefln("Fatality: undefined jump label \"%s\"", funcName);
                                 finalize();
                                 return;
                             }
                         }
                         else
                         {
-                            writeln("Fatality: unknown function: ", funcName);
+                            writefln("Fatality: attempting to call %s, which is not a function", func.type);
                             finalize();
                             return;
                         }

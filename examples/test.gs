@@ -1,1 +1,1 @@
-print global.printSum(4, 6);
+print global.arr[3](4, 6);

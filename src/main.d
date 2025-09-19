@@ -124,7 +124,7 @@ void main(string[] args)
     debug writeln(instructions);
     
     TestObj test = new TestObj();
-    Variant[] arr = [Variant(0.0), Variant(40.0), Variant(100.0), Variant(&printSum)];
+    Variant[] arr = [Variant(0.0), Variant(40.0), Variant("Hello, World!"), Variant(&printSum)];
 
     auto vm = new GsVirtualMachine();
     vm.set("foo", Variant(100));
