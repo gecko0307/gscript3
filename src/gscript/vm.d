@@ -345,30 +345,52 @@ class GsVirtualMachine: GsObject
                     break;
                 case GsInstructionType.INDEX_GET:
                     size_t index = cast(size_t)pop().get!double;
-                    auto array = pop().get!(Variant[]);
-                    if (index >= 0 && index < array.length)
-                        push(array[index]);
+                    auto arrayParam = pop();
+                    if (arrayParam.peek!(Variant[]) !is null)
+                    {
+                        auto array = arrayParam.get!(Variant[]);
+                        if (index >= 0 && index < array.length)
+                        {
+                            push(array[index]);
+                            break;
+                        }
+                        else
+                        {
+                            writeln("Fatality: index is outside array capability");
+                            finalize();
+                            return;
+                        }
+                    }
                     else
                     {
-                        writeln("Fatality: index is outside array capability");
+                        writefln("Fatality: attempting to index %s which is not an array", arrayParam.type);
                         finalize();
                         return;
                     }
-                    break;
                 case GsInstructionType.INDEX_SET:
                     size_t index = cast(size_t)pop().get!double;
-                    auto array = pop().get!(Variant[]);
-                    auto value = pop();
-                    if (index >= 0 && index < array.length)
-                        array[index] = value;
+                    auto arrayParam = pop();
+                    if (arrayParam.peek!(Variant[]) !is null)
+                    {
+                        auto array = pop().get!(Variant[]);
+                        auto value = pop();
+                        if (index >= 0 && index < array.length)
+                            array[index] = value;
+                        else
+                        {
+                            writeln("Fatality: index is outside array capability");
+                            finalize();
+                            return;
+                        }
+                        push(value);
+                        break;
+                    }
                     else
                     {
-                        writeln("Fatality: index is outside array capability");
+                        writefln("Fatality: attempting to index %s which is not an array", arrayParam.type);
                         finalize();
                         return;
                     }
-                    push(value);
-                    break;
                 case GsInstructionType.LENGTH:
                     auto array = pop();
                     push(Variant(cast(double)array.length));
@@ -382,6 +404,10 @@ class GsVirtualMachine: GsObject
                 case GsInstructionType.ARRAY:
                     size_t len = cast(size_t)pop().get!double;
                     auto arr = createArray(len);
+                    for (size_t i = 0; i < len; i++)
+                    {
+                        arr[$ - 1 - i] = pop();
+                    }
                     push(Variant(arr));
                     break;
                 case GsInstructionType.CALL:

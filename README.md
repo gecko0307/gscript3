@@ -10,8 +10,8 @@ Work-in-progress third iteration of GScript, a mini scripting language for D. Fu
 * [x] External state access
 * [x] Basic language features
 * [x] Objects and arrays (partially)
+* [x] Array literals
 * [ ] Object literals
-* [ ] Array literals
 * [ ] Modules and name mangling
 * [ ] Standard library
 
@@ -20,6 +20,7 @@ Work-in-progress third iteration of GScript, a mini scripting language for D. Fu
 - `const` support
 - Global execution context (instead of mandatory `main` function)
 - Direct access to global variables, without `global`. `global` object is still there, for externally defined properties
+- No referencing. All functions can be passed without 
 - Array length is now returned by the built-in `length` property instead of a global `length` function
 - `print` instead of `writeln`.
 

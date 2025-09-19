@@ -38,6 +38,7 @@ enum NodeType
     NumberLiteral,
     StringLiteral,
     BooleanLiteral,
+    ArrayLiteral,
     Function,
     Identifier,
     UnaryExpression,
@@ -599,6 +600,12 @@ class GsParser
             eat(GsTokenType.Boolean);
             return node;
         }
+        else if (currentToken.type == GsTokenType.OpeningSquareBracket)
+        {
+            auto node = new ASTNode(NodeType.ArrayLiteral, "");
+            parseArray(node);
+            return node;
+        }
         else if (currentToken.type == GsTokenType.Identifier)
         {
             string name = currentToken.value;
@@ -824,5 +831,20 @@ class GsParser
                 eat(GsTokenType.Separator);
         }
         eat(GsTokenType.ClosingBracket); // )
+    }
+    
+    void parseArray(ASTNode parentNode)
+    {
+        eat(GsTokenType.OpeningSquareBracket); // [
+        while(running)
+        {
+            if (currentToken.type == GsTokenType.ClosingSquareBracket)
+                break;
+            auto parameterExpr = parseExpression();
+            parentNode.children ~= parameterExpr;
+            if (currentToken.value == ",")
+                eat(GsTokenType.Separator);
+        }
+        eat(GsTokenType.ClosingSquareBracket); // ]
     }
 }

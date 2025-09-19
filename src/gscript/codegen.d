@@ -91,6 +91,13 @@ class GsCodeGenerator
                 instructions ~= GsInstruction(GsInstructionType.PUSH, Variant(node.value.to!bool));
                 break;
             
+            case NodeType.ArrayLiteral:
+                foreach(child; node.children)
+                    instructions ~= generate(child);
+                instructions ~= GsInstruction(GsInstructionType.PUSH, Variant(node.children.length));
+                instructions ~= GsInstruction(GsInstructionType.ARRAY);
+                break;
+            
             case NodeType.Identifier:
                 string name = node.value;
                 if (name == "global")
