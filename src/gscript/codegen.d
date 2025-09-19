@@ -290,7 +290,10 @@ class GsCodeGenerator
             
             case NodeType.MemberPropertyAccessExpression:
                 instructions ~= generate(node.children[0]);
-                instructions ~= GsInstruction(GsInstructionType.GET, Variant(node.value));
+                if (node.value == "length")
+                    instructions ~= GsInstruction(GsInstructionType.LENGTH);
+                else
+                    instructions ~= GsInstruction(GsInstructionType.GET, Variant(node.value));
                 break;
             
             case NodeType.MemberCallExpression:

@@ -39,8 +39,11 @@ GsInstruction[] compile(string script, string filename = "")
     GsProgram program = new GsProgram();
     if (parser.parseProgram(program))
     {
-        foreach(ASTNode node; program.ast)
-            node.print();
+        debug
+        {
+            foreach(ASTNode node; program.ast)
+                node.print();
+        }
         GsCodeGenerator cg = new GsCodeGenerator();
         return cg.generate(program);
     }
