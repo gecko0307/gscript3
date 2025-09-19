@@ -1,8 +1,3 @@
-func foo()
-{
-    print "foo";
-}
-
-const arr = [2, [0, 100], foo];
-print arr[1][1];
-arr[2]();
+let arr = [0, 40, 900];
+arr = arr.insert(0, 20);
+print arr;

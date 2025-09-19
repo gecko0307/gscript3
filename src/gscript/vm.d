@@ -31,6 +31,7 @@ import std.stdio;
 import std.conv;
 import std.variant;
 import std.traits;
+import std.algorithm;
 import gscript.instruction_set;
 
 interface GsObject
@@ -78,6 +79,92 @@ struct GsCallFrame
     size_t numParameters;
 }
 
+Variant vmBuiltinRemove(Variant[] args)
+{
+    if (args.length < 2)
+        return args[0];
+    
+    if (args[0].peek!(Variant[]) is null)
+        return args[0];
+    
+    auto arr = args[0].get!(Variant[]);
+    if (arr.length == 0)
+        return Variant(arr);
+    
+    auto removeIndex = cast(size_t)args[1].get!(double);
+    auto newArr = new Variant[arr.length - 1];
+    for (size_t i = 0; i < arr.length; i++)
+    {
+        if (i < removeIndex)
+            newArr[i] = arr[i];
+        else if (i > removeIndex)
+            newArr[i - 1] = arr[i];
+    }
+    return Variant(newArr);
+}
+
+Variant vmBuiltinRemoveFront(Variant[] args)
+{
+    if (args[0].peek!(Variant[]) is null)
+        return args[0];
+    
+    auto arr = args[0].get!(Variant[]);
+    if (arr.length == 0)
+        return Variant(arr);
+    
+    auto newArr = new Variant[arr.length - 1];
+    for (size_t i = 1; i < arr.length; i++)
+    {
+        newArr[i - 1] = arr[i];
+    }
+    return Variant(newArr);
+}
+
+Variant vmBuiltinRemoveBack(Variant[] args)
+{
+    if (args[0].peek!(Variant[]) is null)
+        return args[0];
+    
+    auto arr = args[0].get!(Variant[]);
+    if (arr.length == 0)
+        return Variant(arr);
+    
+    auto newArr = new Variant[arr.length - 1];
+    for (size_t i = 0; i < newArr.length; i++)
+    {
+        newArr[i] = arr[i];
+    }
+    return Variant(newArr);
+}
+
+Variant vmBuiltinInsert(Variant[] args)
+{
+    if (args.length < 3)
+        return args[0];
+    
+    if (args[0].peek!(Variant[]) is null)
+        return args[0];
+    
+    auto arr = args[0].get!(Variant[]);
+    auto insertIndex = cast(size_t)args[1].get!(double);
+    if (insertIndex < 0)
+        return args[0];
+    
+    auto value = args[2];
+    
+    auto newArr = new Variant[arr.length + 1];
+    for (size_t i = 0; i < newArr.length; i++)
+    {
+        if (i < insertIndex)
+            newArr[i] = arr[i];
+        else if (i == insertIndex)
+            newArr[i] = value;
+        else
+            newArr[i] = arr[i - 1];
+    }
+    return Variant(newArr);
+}
+
 class GsVirtualMachine: GsObject
 {
   protected:
@@ -102,6 +189,11 @@ class GsVirtualMachine: GsObject
         this.ip = 0;
         this.sp = 0;
         this.cp = 0;
+        
+        set("remove", Variant(&vmBuiltinRemove));
+        set("removeFront", Variant(&vmBuiltinRemoveFront));
+        set("removeBack", Variant(&vmBuiltinRemoveBack));
+        set("insert", Variant(&vmBuiltinInsert));
     }
     
     Variant get(string key)
@@ -298,9 +390,23 @@ class GsVirtualMachine: GsObject
                     push(Variant(!a));
                     break;
                 case GsInstructionType.CAT:
-                    auto b = pop().toString();
-                    auto a = pop().toString();
-                    push(Variant(a ~ b));
+                    auto b = pop();
+                    auto a = pop();
+                    if (a.type is typeid(string))
+                    {
+                        push(Variant(a.toString() ~ b.toString()));
+                    }
+                    else if (a.peek!(Variant[]) !is null)
+                    {
+                        auto arr = a.get!(Variant[]);
+                        push(Variant(arr ~ b));
+                    }
+                    else
+                    {
+                        writefln("Fatality: illegal concatenation of %s and %s", a.type, b.type);
+                        finalize();
+                        return;
+                    }
                     break;
                 case GsInstructionType.EQ:
                     auto b = pop();

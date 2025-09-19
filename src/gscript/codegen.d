@@ -30,6 +30,7 @@ module gscript.codegen;
 import std.variant;
 import std.array;
 import std.conv;
+import std.algorithm;
 import gscript.parser;
 import gscript.instruction_set;
 
@@ -59,6 +60,10 @@ class GsCodeGenerator
     GsInstructionType[string] unaryOperatorMap = [
         "-": GsInstructionType.NEG,
         "!": GsInstructionType.NOT
+    ];
+    
+    string[] builtins = [
+        "remove", "removeFront", "removeBack", "insert"
     ];
     
     Scope globalScope;
@@ -305,11 +310,23 @@ class GsCodeGenerator
             
             case NodeType.MemberCallExpression:
                 size_t numParameters = node.children.length - 1;
-                foreach(child; node.children[1..$])
-                    instructions ~= generate(child);
-                instructions ~= generate(node.children[0]); // identifier expression
-                instructions ~= GsInstruction(GsInstructionType.GET, Variant(node.value));
-                instructions ~= GsInstruction(GsInstructionType.CALL, Variant(cast(double)numParameters));
+                
+                if (builtins.canFind(node.value))
+                {
+                    instructions ~= generate(node.children[0]); // identifier expression
+                    foreach(child; node.children[1..$])
+                        instructions ~= generate(child);
+                    instructions ~= GsInstruction(GsInstructionType.PUSH, Variant(node.value));
+                    instructions ~= GsInstruction(GsInstructionType.CALL, Variant(cast(double)(numParameters + 1)));
+                }
+                else
+                {
+                    instructions ~= generate(node.children[0]); // identifier expression
+                    foreach(child; node.children[1..$])
+                        instructions ~= generate(child);
+                    instructions ~= GsInstruction(GsInstructionType.GET, Variant(node.value));
+                    instructions ~= GsInstruction(GsInstructionType.CALL, Variant(cast(double)numParameters));
+                }
                 break;
             
             case NodeType.Function:
