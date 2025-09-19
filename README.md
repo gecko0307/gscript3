@@ -10,10 +10,10 @@ Work-in-progress third iteration of GScript, a mini scripting language for D. Fu
 * [x] External state access
 * [x] Basic language features
 * [x] Objects and arrays (partially)
-* [] Object literals
-* [] Array literals
-* [] Modules and name mangling
-* [] Standard library
+* [ ] Object literals
+* [ ] Array literals
+* [ ] Modules and name mangling
+* [ ] Standard library
 
 ## Main Changes from GScript2
 - `let` istead of `var`
