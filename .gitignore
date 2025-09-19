@@ -20,6 +20,9 @@ docs.json
 __dummy.html
 docs/
 
+# Debug files
+*.pdb
+
 # Code coverage
 *.lst
 
