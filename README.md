@@ -20,8 +20,8 @@ Work-in-progress third iteration of GScript, a mini scripting language for D. Fu
 - `const` support
 - Global execution context (instead of mandatory `main` function)
 - Direct access to global variables, without `global`. `global` object is still there, for externally defined properties
-- Array length now returned by the built-in `length` property instead of a global `length` function
-- `print` instea of `writeln`.
+- Array length is now returned by the built-in `length` property instead of a global `length` function
+- `print` instead of `writeln`.
 
 Architecture improvements:
 - A more efficient ISA
