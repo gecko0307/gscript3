@@ -645,14 +645,14 @@ class GsParser
             ASTNode node;
             if (currentToken.type == GsTokenType.OpeningBracket)
             {
-                // Call by index
+                // Call function by index
                 node = new ASTNode(NodeType.IndexCallExpression, "", [leftExpr, indexExpr]);
                 node.programScope = program.peekScope();
                 parseList(node);
             }
             else
             {
-                // Read by index
+                // Access value by index
                 node = new ASTNode(NodeType.IndexAccessExpression, "", [leftExpr, indexExpr]);
                 node.programScope = program.peekScope();
             }
@@ -667,7 +667,7 @@ class GsParser
             if (currentToken.type == GsTokenType.OpeningBracket)
             {
                 // Member function call
-                node = new ASTNode(NodeType.MemberPropertyAccessExpression, name, [leftExpr]);
+                node = new ASTNode(NodeType.MemberCallExpression, name, [leftExpr]);
                 node.programScope = program.peekScope();
                 parseList(node);
             }
