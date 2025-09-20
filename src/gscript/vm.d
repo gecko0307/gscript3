@@ -327,67 +327,158 @@ class GsVirtualMachine: GsObject
                     pop();
                     break;
                 case GsInstructionType.ADD:
-                    auto b = pop().get!double;
-                    auto a = pop().get!double;
-                    push(Variant(a + b));
+                    auto b = pop();
+                    auto a = pop();
+                    if (a.convertsTo!(double) && b.convertsTo!(double))
+                        push(Variant(a.get!double + b.get!double));
+                    else
+                    {
+                        writefln("Fatality: addition of %s and %s", a.type, b.type);
+                        finalize();
+                        return;
+                    }
                     break;
                 case GsInstructionType.SUB:
-                    auto b = pop().get!double;
-                    auto a = pop().get!double;
-                    push(Variant(a - b));
+                    auto b = pop();
+                    auto a = pop();
+                    if (a.convertsTo!(double) && b.convertsTo!(double))
+                        push(Variant(a.get!double - b.get!double));
+                    else
+                    {
+                        writefln("Fatality: subtraction of %s and %s", a.type, b.type);
+                        finalize();
+                        return;
+                    }
                     break;
                 case GsInstructionType.MUL:
-                    auto b = pop().get!double;
-                    auto a = pop().get!double;
-                    push(Variant(a * b));
+                    auto b = pop();
+                    auto a = pop();
+                    if (a.convertsTo!(double) && b.convertsTo!(double))
+                        push(Variant(a.get!double * b.get!double));
+                    else
+                    {
+                        writefln("Fatality: multiplication of %s and %s", a.type, b.type);
+                        finalize();
+                        return;
+                    }
                     break;
                 case GsInstructionType.DIV:
-                    auto b = pop().get!double;
-                    auto a = pop().get!double;
-                    push(Variant(a / b));
+                    auto b = pop();
+                    auto a = pop();
+                    if (a.convertsTo!(double) && b.convertsTo!(double))
+                        push(Variant(a.get!double / b.get!double));
+                    else
+                    {
+                        writefln("Fatality: division of %s and %s", a.type, b.type);
+                        finalize();
+                        return;
+                    }
                     break;
                 case GsInstructionType.NEG:
-                    auto a = pop().get!double;
-                    push(Variant(-a));
+                    auto a = pop();
+                    if (a.convertsTo!(double))
+                        push(Variant(-a.get!double));
+                    else
+                    {
+                        writefln("Fatality: negation of %s", a.type);
+                        finalize();
+                        return;
+                    }
                     break;
                 case GsInstructionType.MOD:
-                    auto b = pop().get!double;
-                    auto a = pop().get!double;
-                    push(Variant(a % b));
+                    auto b = pop();
+                    auto a = pop();
+                    if (a.convertsTo!(double) && b.convertsTo!(double))
+                        push(Variant(a.get!double % b.get!double));
+                    else
+                    {
+                        writefln("Fatality: modulo of %s and %s", a.type, b.type);
+                        finalize();
+                        return;
+                    }
                     break;
                 case GsInstructionType.POW:
-                    auto b = pop().get!double;
-                    auto a = pop().get!double;
-                    push(Variant(a ^^ b));
+                    auto b = pop();
+                    auto a = pop();
+                    if (a.convertsTo!(double) && b.convertsTo!(double))
+                        push(Variant(a.get!double ^^ b.get!double));
+                    else
+                    {
+                        writefln("Fatality: power of %s and %s", a.type, b.type);
+                        finalize();
+                        return;
+                    }
                     break;
                 case GsInstructionType.BITWISE_AND:
-                    auto b = cast(long)pop().get!double;
-                    auto a = cast(long)pop().get!double;
-                    push(Variant(cast(double)(a & b)));
+                    auto b = pop();
+                    auto a = pop();
+                    if (a.convertsTo!(double) && b.convertsTo!(double))
+                        push(Variant(cast(long)(a.get!double) & cast(long)(b.get!double)));
+                    else
+                    {
+                        writefln("Fatality: bitwise AND of %s and %s", a.type, b.type);
+                        finalize();
+                        return;
+                    }
                     break;
                 case GsInstructionType.BITWISE_OR:
-                    auto b = cast(long)pop().get!double;
-                    auto a = cast(long)pop().get!double;
-                    push(Variant(cast(double)(a | b)));
+                    auto b = pop();
+                    auto a = pop();
+                    if (a.convertsTo!(double) && b.convertsTo!(double))
+                        push(Variant(cast(long)(a.get!double) | cast(long)(b.get!double)));
+                    else
+                    {
+                        writefln("Fatality: bitwise OR of %s and %s", a.type, b.type);
+                        finalize();
+                        return;
+                    }
                     break;
                 case GsInstructionType.BITWISE_XOR:
-                    auto b = cast(long)pop().get!double;
-                    auto a = cast(long)pop().get!double;
-                    push(Variant(cast(double)(a ^ b)));
+                    auto b = pop();
+                    auto a = pop();
+                    if (a.convertsTo!(double) && b.convertsTo!(double))
+                        push(Variant(cast(long)(a.get!double) ^ cast(long)(b.get!double)));
+                    else
+                    {
+                        writefln("Fatality: bitwise XOR of %s and %s", a.type, b.type);
+                        finalize();
+                        return;
+                    }
                     break;
                 case GsInstructionType.AND:
-                    auto b = cast(bool)pop().get!double;
-                    auto a = cast(bool)pop().get!double;
-                    push(Variant(a && b));
+                    auto b = pop();
+                    auto a = pop();
+                    if (a.convertsTo!(double) && b.convertsTo!(double))
+                        push(Variant(a.get!double && b.get!double));
+                    else
+                    {
+                        writefln("Fatality: logical AND of %s and %s", a.type, b.type);
+                        finalize();
+                        return;
+                    }
                     break;
                 case GsInstructionType.OR:
-                    auto b = cast(bool)pop().get!double;
-                    auto a = cast(bool)pop().get!double;
-                    push(Variant(a || b));
+                    auto b = pop();
+                    auto a = pop();
+                    if (a.convertsTo!(double) && b.convertsTo!(double))
+                        push(Variant(a.get!double || b.get!double));
+                    else
+                    {
+                        writefln("Fatality: logical OR of %s and %s", a.type, b.type);
+                        finalize();
+                        return;
+                    }
                     break;
                 case GsInstructionType.NOT:
-                    auto a = cast(bool)pop().get!double;
-                    push(Variant(!a));
+                    auto a = pop();
+                    if (a.convertsTo!(double))
+                        push(Variant(!a.get!double));
+                    else
+                    {
+                        writefln("Fatality: logical NOT of %s", a.type);
+                        finalize();
+                        return;
+                    }
                     break;
                 case GsInstructionType.CAT:
                     auto b = pop();
@@ -682,6 +773,23 @@ class GsVirtualMachine: GsObject
                         auto obj = cast(GsObject)param.get!Object;
                         obj.set(key, value);
                         push(value);
+                        break;
+                    }
+                    else
+                    {
+                        writeln("Fatality: attempting to access member \"", key, "\" of non-object");
+                        finalize();
+                        return;
+                    }
+                case GsInstructionType.INIT_SET:
+                    auto key = instruction.operand.get!string;
+                    auto value = pop();
+                    auto param = peek();
+                    TypeInfo_Class typeInfo = cast(TypeInfo_Class)param.type;
+                    if (typeInfo)
+                    {
+                        auto obj = cast(GsObject)param.get!Object;
+                        obj.set(key, value);
                         break;
                     }
                     else

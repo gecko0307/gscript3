@@ -39,6 +39,7 @@ enum NodeType
     StringLiteral,
     BooleanLiteral,
     ArrayLiteral,
+    ObjectLiteral,
     Function,
     Identifier,
     UnaryExpression,
@@ -54,7 +55,8 @@ enum NodeType
     IndexAccessExpression,
     IndexCallExpression,
     MemberPropertyAccessExpression,
-    MemberCallExpression
+    MemberCallExpression,
+    KeyValueExpression
 }
 
 immutable string[] assignOperators = [
@@ -379,8 +381,11 @@ class GsParser
     
     void stop(string msg)
     {
-        running = false;
-        writeln(filename, "(", lexer.line.to!string, "): ", msg);
+        if (running)
+        {
+            running = false;
+            writeln(filename, "(", lexer.line.to!string, "): ", msg);
+        }
     }
 
     void eat(GsTokenType expectedType)
@@ -604,6 +609,12 @@ class GsParser
         {
             auto node = new ASTNode(NodeType.ArrayLiteral, "");
             parseArray(node);
+            return node;
+        }
+        else if (currentToken.type == GsTokenType.OpeningCurlyBracket)
+        {
+            auto node = new ASTNode(NodeType.ObjectLiteral, "");
+            parseObject(node);
             return node;
         }
         else if (currentToken.type == GsTokenType.Identifier)
@@ -846,5 +857,50 @@ class GsParser
                 eat(GsTokenType.Separator);
         }
         eat(GsTokenType.ClosingSquareBracket); // ]
+    }
+    
+    void parseObject(ASTNode parentNode)
+    {
+        eat(GsTokenType.OpeningCurlyBracket); // {
+        while(running)
+        {
+            if (currentToken.type == GsTokenType.ClosingCurlyBracket)
+                break;
+            auto keyValueExpr = parseKeyValueExpression();
+            parentNode.children ~= keyValueExpr;
+            if (currentToken.value == ",")
+                eat(GsTokenType.Separator);
+            else if (currentToken.type != GsTokenType.ClosingCurlyBracket)
+            {
+                stop("Unexpected token \"" ~ currentToken.value ~ "\" in object literal");
+                return;
+            }
+        }
+        eat(GsTokenType.ClosingCurlyBracket); // }
+    }
+    
+    ASTNode parseKeyValueExpression()
+    {
+        if (currentToken.type == GsTokenType.Identifier)
+        {
+            string name = currentToken.value;
+            eat(GsTokenType.Identifier);
+            ASTNode node = new ASTNode(NodeType.KeyValueExpression, name);
+            if (currentToken.value == ":")
+                eat(GsTokenType.Separator); // :
+            else
+            {
+                stop("Unexpected token \"" ~ currentToken.value ~ "\" in key-value expression");
+                return null;
+            }
+            ASTNode valueExpr = parseExpression();
+            node.children ~= valueExpr;
+            return node;
+        }
+        else
+        {
+            stop("Unexpected token \"" ~ currentToken.value ~ "\" in key-value expression");
+            return null;
+        }
     }
 }

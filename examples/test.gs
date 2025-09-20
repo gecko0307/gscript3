@@ -1,3 +1,14 @@
-let arr = [0, 40, 900];
-arr = arr.insert(0, 20);
-print arr;
+func getLocation()
+{
+    return "New York";
+}
+
+const person = {
+    name: "John Doe",
+    age: 30,
+    location: getLocation()
+};
+
+print person.name;
+print person.age;
+print person.location;

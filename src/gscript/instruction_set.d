@@ -56,28 +56,29 @@ enum GsInstructionType: ubyte
     GREATER = 20,
     LESS_EQ = 21,
     GREATER_EQ = 22,
-    JMP = 23,          // Unconditional jump
-    JMP_IF = 24,       // Conditional jump if true
-    JMP_IF_NOT = 25,   // Conditional jump if false
+    JMP = 23,          // unconditional jump
+    JMP_IF = 24,       // conditional jump if true
+    JMP_IF_NOT = 25,   // conditional jump if false
     INDEX_GET = 26,    // INDEX_GET          - gets an element of an array
     INDEX_SET = 27,    // INDEX_SET          - sets an element of an array
     LENGTH = 28,       // LENGTH             - pop array and push its length
     PRINT = 29,        // PRINT              - print the top value on the stack
-    HALT = 30,         // HALT               - Stop execution
-    CALL = 31,         // CALL N             - Pop a subroutine name/function/delegate and call it using N arguments
+    HALT = 30,         // HALT               - stop execution
+    CALL = 31,         // CALL N             - pop a subroutine name/function/delegate and call it using N arguments
     RET = 32,          // RET                - return from a subroutine
-    LOAD_VAR = 33,     // LOAD_VAR N         - Load a local variable N onto the stack
-    STORE_VAR = 34,    // STORE_VAR N        - Pop a value from the stack and store it as a local variable N
-    LOAD_ARG = 35,     // LOAD_ARG N         - Load an argument N onto the stack
-    STORE_ARG = 36,    // STORE_ARG N        - Pop a value from the stack and store it as an argument N
-    NEW = 37,          // NEW                - Create a new object and push it onto the stack
+    LOAD_VAR = 33,     // LOAD_VAR N         - load a local variable N onto the stack
+    STORE_VAR = 34,    // STORE_VAR N        - pop a value from the stack and store it as a local variable N
+    LOAD_ARG = 35,     // LOAD_ARG N         - load an argument N onto the stack
+    STORE_ARG = 36,    // STORE_ARG N        - pop a value from the stack and store it as an argument N
+    NEW = 37,          // NEW                - create a new object and push it onto the stack
     GET = 38,          // GET "X"            - pop an object, get the value of object's property X and push it onto the stack
-    SET = 39,          // SET "X"            - Pop a value, then an object, and set the object's property X to the value
-    CONTAINS = 40,     // CONTAINS "X"       - Pop an object and push true if a property X exists in the object, false otherwise
+    SET = 39,          // SET "X"            - pop an object, then a value. Set the object's property X to the value. Push the value back
+    CONTAINS = 40,     // CONTAINS "X"       - pop an object and push true if a property X exists in the object, false otherwise
     GLOBAL = 41,
     ARRAY = 42,
     GLOBAL_LOAD_VAR = 43,
-    GLOBAL_STORE_VAR = 44
+    GLOBAL_STORE_VAR = 44,
+    INIT_SET = 45,     // INIT_SET "X"       - pop a value, then peek an object. Set the object's property X to the value
 }
 
 enum GsOperandType: ubyte

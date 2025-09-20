@@ -103,6 +103,16 @@ class GsCodeGenerator
                 instructions ~= GsInstruction(GsInstructionType.ARRAY);
                 break;
             
+            case NodeType.ObjectLiteral:
+                instructions ~= GsInstruction(GsInstructionType.NEW);
+                foreach(child; node.children)
+                {
+                    string key = child.value;
+                    instructions ~= generate(child.children[0]);
+                    instructions ~= GsInstruction(GsInstructionType.INIT_SET, Variant(key));
+                }
+                break;
+            
             case NodeType.Identifier:
                 string name = node.value;
                 if (name == "global")
