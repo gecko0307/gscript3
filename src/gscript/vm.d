@@ -39,11 +39,16 @@ interface GsObject
     Variant get(string key);
     void set(string key, Variant value);
     bool contains(string key);
+    GsObject dup();
 }
 
 class GsGCObject: GsObject
 {
-    private Variant[string] storage;
+    protected:
+    
+    Variant[string] storage;
+    
+    public:
     
     this()
     {
@@ -55,7 +60,18 @@ class GsGCObject: GsObject
         if (v)
             return *v;
         else
-            return Variant(cast(double)0.0);
+        {
+            auto proto = "__proto__" in storage;
+            if (proto)
+            {
+                if (auto protoObj = proto.peek!GsObject)
+                    return protoObj.get(key);
+                else
+                    return Variant(null);
+            }
+            else
+                return Variant(null);
+        }
     }
 
     void set(string key, Variant value)
@@ -65,7 +81,31 @@ class GsGCObject: GsObject
 
     bool contains(string key)
     {
-        return (key in storage) !is null;
+        if ((key in storage) !is null)
+            return true;
+        else
+        {
+            auto proto = "__proto__" in storage;
+            if (proto)
+            {
+                if (auto protoObj = proto.peek!GsObject)
+                    return protoObj.contains(key);
+                else
+                    return false;
+            }
+            else
+                return false;
+        }
+    }
+    
+    GsObject dup()
+    {
+        GsGCObject newObj = new GsGCObject();
+        foreach(key, value; storage)
+        {
+            newObj.set(key, value);
+        }
+        return newObj;
     }
 }
 
@@ -214,6 +254,16 @@ class GsVirtualMachine: GsObject
     {
         return (key in globals) !is null;
     }
+    
+    GsObject dup()
+    {
+        GsGCObject newObj = new GsGCObject();
+        foreach(key, value; globals)
+        {
+            newObj.set(key, value);
+        }
+        return newObj;
+    }
 
     // Stack manipulation methods
     Variant pop()
@@ -243,7 +293,7 @@ class GsVirtualMachine: GsObject
         stack[sp++] = value;
     }
     
-    GsGCObject createObject()
+    GsObject createObject()
     {
         return new GsGCObject();
     }
@@ -596,7 +646,7 @@ class GsVirtualMachine: GsObject
                     writeln(pop());
                     break;
                 case GsInstructionType.GLOBAL:
-                    push(Variant(this));
+                    push(Variant(cast(GsObject)this));
                     break;
                 case GsInstructionType.ARRAY:
                     size_t len = cast(size_t)pop().get!double;
@@ -742,23 +792,31 @@ class GsVirtualMachine: GsObject
                     auto obj = createObject();
                     push(Variant(obj));
                     break;
-                case GsInstructionType.GET:
-                    auto key = instruction.operand.get!string;
+                case GsInstructionType.REUSE:
                     auto param = pop();
-                    TypeInfo_Class typeInfo = cast(TypeInfo_Class)param.type;
-                    if (typeInfo)
+                    if (auto obj = param.peek!(GsObject))
                     {
-                        auto obj = cast(GsObject)param.get!Object;
-                        auto value = obj.get(key);
-                        push(value);
-                    }
-                    else if (key == "length" && param.peek!(Variant[]) !is null)
-                    {
-                        push(Variant(param.length));
+                        auto newObj = createObject();
+                        newObj.set("__proto__", param);
+                        push(Variant(newObj));
                     }
                     else
                     {
-                        writeln("Fatality: attempting to access member \"", key, "\" of non-object");
+                        writeln("Fatality: attempting to reuse non-object");
+                        finalize();
+                        return;
+                    }
+                    break;
+                case GsInstructionType.GET:
+                    auto key = instruction.operand.get!string;
+                    auto param = pop();
+                    if (auto obj = param.peek!(GsObject))
+                    {
+                        push(obj.get(key));
+                    }
+                    else
+                    {
+                        writeln("Fatality: attempting to read member \"", key, "\" of non-object");
                         finalize();
                         return;
                     }
@@ -767,17 +825,15 @@ class GsVirtualMachine: GsObject
                     auto key = instruction.operand.get!string;
                     auto param = pop();
                     auto value = pop();
-                    TypeInfo_Class typeInfo = cast(TypeInfo_Class)param.type;
-                    if (typeInfo)
+                    if (auto obj = param.peek!(GsObject))
                     {
-                        auto obj = cast(GsObject)param.get!Object;
                         obj.set(key, value);
                         push(value);
                         break;
                     }
                     else
                     {
-                        writeln("Fatality: attempting to access member \"", key, "\" of non-object");
+                        writeln("Fatality: attempting to write member \"", key, "\" of non-object");
                         finalize();
                         return;
                     }
@@ -785,23 +841,30 @@ class GsVirtualMachine: GsObject
                     auto key = instruction.operand.get!string;
                     auto value = pop();
                     auto param = peek();
-                    TypeInfo_Class typeInfo = cast(TypeInfo_Class)param.type;
-                    if (typeInfo)
+                    if (auto obj = param.peek!(GsObject))
                     {
-                        auto obj = cast(GsObject)param.get!Object;
                         obj.set(key, value);
                         break;
                     }
                     else
                     {
-                        writeln("Fatality: attempting to access member \"", key, "\" of non-object");
+                        writeln("Fatality: attempting to write member \"", key, "\" of non-object");
                         finalize();
                         return;
                     }
                 case GsInstructionType.CONTAINS:
                     auto key = instruction.operand.get!string;
-                    auto obj = pop().get!GsObject;
-                    push(Variant(obj.contains(key)));
+                    auto param = pop();
+                    if (auto obj = param.peek!(GsObject))
+                    {
+                        push(Variant(obj.contains(key)));
+                    }
+                    else
+                    {
+                        writeln("Fatality: attempting to read member \"", key, "\" of non-object");
+                        finalize();
+                        return;
+                    }
                     break;
                 case GsInstructionType.HALT:
                     finalize();

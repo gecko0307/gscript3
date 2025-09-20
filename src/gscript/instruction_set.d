@@ -79,6 +79,7 @@ enum GsInstructionType: ubyte
     GLOBAL_LOAD_VAR = 43,
     GLOBAL_STORE_VAR = 44,
     INIT_SET = 45,     // INIT_SET "X"       - pop a value, then peek an object. Set the object's property X to the value
+    REUSE = 46         // REUSE              - pop an object, create a derived object and push it onto the stack
 }
 
 enum GsOperandType: ubyte

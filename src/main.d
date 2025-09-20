@@ -74,6 +74,13 @@ class TestObj: GsObject
         else if (key == "foo") return true;
         else return false;
     }
+    
+    GsObject dup()
+    {
+        TestObj newObj = new TestObj();
+        newObj.x = x;
+        return newObj;
+    }
 }
 
 Variant printSum(Variant[] args)

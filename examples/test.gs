@@ -1,3 +1,10 @@
-import "foo.gs" as foo;
+import "foo.gs" as Foo;
 
-foo.test();
+const f = new Foo;
+Foo.prop = 10;
+f.test();
+
+f.prop = 5;
+f.test();
+
+Foo.test();

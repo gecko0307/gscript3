@@ -1,4 +1,4 @@
-global.foo =
+global.Foo =
 {
     prop: "foo.prop",
     test: func(self)

@@ -384,6 +384,11 @@ class GsCodeGenerator
                 instructions ~= GsInstruction(GsInstructionType.CALL, Variant(cast(double)numParameters));
                 break;
             
+            case NodeType.NewExpression:
+                instructions ~= generate(node.children[0]);
+                instructions ~= GsInstruction(GsInstructionType.REUSE);
+                break;
+            
             case NodeType.Function:
                 // No-op
                 break;

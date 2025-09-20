@@ -57,7 +57,8 @@ enum NodeType
     IndexCallExpression,
     MemberPropertyAccessExpression,
     MemberCallExpression,
-    KeyValueExpression
+    KeyValueExpression,
+    NewExpression
 }
 
 immutable string[] assignOperators = [
@@ -702,6 +703,29 @@ class GsParser
             auto node = new ASTNode(NodeType.ObjectLiteral, "");
             parseObject(node);
             return node;
+        }
+        else if (currentToken.value == "new")
+        {
+            eat(GsTokenType.Keyword); // "new"
+            string name = currentToken.value;
+            eat(GsTokenType.Identifier);
+            ASTNode node;
+            if (currentToken.type == GsTokenType.OpeningBracket)
+            {
+                // Function call
+                node = new ASTNode(NodeType.FunctionCallExpression, name);
+                node.programScope = program.peekScope();
+                parseList(node);
+            }
+            else
+            {
+                // Variable access
+                node = new ASTNode(NodeType.Identifier, name);
+                node.programScope = program.peekScope();
+            }
+            
+            ASTNode newExpr = new ASTNode(NodeType.NewExpression, "", [node]);
+            return newExpr;
         }
         else if (currentToken.value == "func")
         {
