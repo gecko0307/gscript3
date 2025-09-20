@@ -26,7 +26,7 @@ Work-in-progress third iteration of GScript, a mini scripting language for D. Fu
 - Global execution context (instead of mandatory `main` function)
 - Direct access to global variables, without `global`. `global` object is still there, for imports and externally defined properties
 - JS-like object literals istead of prototype functions: `{ foo: "bar" }`
-- New prototype model; see below
+- Prototype inheritance instead of shallow-copy; see below
 - New module system; see below
 - No explicit referencing. Function reference is passed without `ref` keyword
 - Array length is now returned by the built-in `length` property instead of a global `length` function
