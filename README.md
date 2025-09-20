@@ -43,9 +43,9 @@ GScript3 implements object-based module system. To reuse code, store it in the `
 
 foo.gs:
 ```
-global.foo =
+global.Foo =
 {
-    prop: "foo.prop",
+    prop: "Foo.prop",
     test: func(self)
     {
         print self.prop;
@@ -57,12 +57,12 @@ Now you can import and use this module:
 
 main.gs:
 ```
-import "foo.gs" as foo;
+import "foo.gs" as Foo;
 
-foo.test();
+Foo.test();
 ```
 
-`foo` in this case is just an automatically defined shorthand for `global.foo`.
+`Foo` in this case is just an automatically defined shorthand for `global.Foo`.
 
 Currently there is no module-local scope! All root-level definitions are placed in one global scope, so it is not recommended to define global variables and free functions in modules to avoid name conflicts.
 
@@ -72,7 +72,7 @@ GScript3 uses a prototype-based OOP, similar to JavaScript. Objects are created 
 Example:
 
 ```
-import "foo.gs" as foo;
+import "foo.gs" as Foo;
 
 const f = new Foo;
 
