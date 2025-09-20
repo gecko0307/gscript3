@@ -12,6 +12,7 @@ Work-in-progress third iteration of GScript, a mini scripting language for D. Fu
 * [x] Objects and arrays (partially)
 * [x] Array literals
 * [x] Object literals
+* [x] Function literals
 * [ ] Modules and name mangling
 * [ ] Standard library
 

@@ -78,6 +78,36 @@ class GsCodeGenerator
     {
     }
     
+    protected GsInstruction[] generateLambdas(ASTNode node)
+    {
+        GsInstruction[] instructions;
+        
+        if (node.type == NodeType.FunctionLiteral)
+        {
+            auto func = cast(ASTFunctionLiteral)node;
+            // TODO: qualified name
+            instructions ~= GsInstruction(GsInstructionType.LABEL, Variant(func.generatedName));
+            
+            // Function body
+            instructions ~= generate(func.bodyBlock);
+            
+            // Default return 0
+            instructions ~= GsInstruction(GsInstructionType.PUSH, Variant(cast(double)0.0));
+            instructions ~= GsInstruction(GsInstructionType.RET);
+        }
+        else
+        {
+            foreach(child; node.children)
+            {
+                auto instr = generateLambdas(child);
+                if (instr.length)
+                    instructions ~= instr;
+            }
+        }
+        
+        return instructions;
+    }
+    
     protected GsInstruction[] generate(ASTNode node)
     {
         GsInstruction[] instructions;
@@ -111,6 +141,12 @@ class GsCodeGenerator
                     instructions ~= generate(child.children[0]);
                     instructions ~= GsInstruction(GsInstructionType.INIT_SET, Variant(key));
                 }
+                break;
+            
+            case NodeType.FunctionLiteral:
+                auto func = cast(ASTFunctionLiteral)node;
+                func.generatedName = getLabel();
+                instructions ~= GsInstruction(GsInstructionType.PUSH, Variant(func.generatedName));
                 break;
             
             case NodeType.Identifier:
@@ -319,24 +355,24 @@ class GsCodeGenerator
                 break;
             
             case NodeType.MemberCallExpression:
-                size_t numParameters = node.children.length - 1;
+                size_t numParameters = node.children.length;
+                
+                foreach(child; node.children)
+                        instructions ~= generate(child);
                 
                 if (builtins.canFind(node.value))
                 {
-                    instructions ~= generate(node.children[0]); // identifier expression
-                    foreach(child; node.children[1..$])
-                        instructions ~= generate(child);
+                    // Use builtin
                     instructions ~= GsInstruction(GsInstructionType.PUSH, Variant(node.value));
-                    instructions ~= GsInstruction(GsInstructionType.CALL, Variant(cast(double)(numParameters + 1)));
                 }
                 else
                 {
+                    // Use member function
                     instructions ~= generate(node.children[0]); // identifier expression
-                    foreach(child; node.children[1..$])
-                        instructions ~= generate(child);
                     instructions ~= GsInstruction(GsInstructionType.GET, Variant(node.value));
-                    instructions ~= GsInstruction(GsInstructionType.CALL, Variant(cast(double)numParameters));
                 }
+                
+                instructions ~= GsInstruction(GsInstructionType.CALL, Variant(cast(double)numParameters));
                 break;
             
             case NodeType.Function:
@@ -405,6 +441,14 @@ class GsCodeGenerator
                 instructions ~= GsInstruction(GsInstructionType.PUSH, Variant(cast(double)0.0));
                 instructions ~= GsInstruction(GsInstructionType.RET);
             }
+        }
+        
+        // Generate code for anonymous fuctions
+        foreach(ASTNode node; ast)
+        {
+            auto instr = generateLambdas(node);
+            if (instr.length)
+                instructions ~= instr;
         }
         
         return instructions;

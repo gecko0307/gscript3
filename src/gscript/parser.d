@@ -40,6 +40,7 @@ enum NodeType
     BooleanLiteral,
     ArrayLiteral,
     ObjectLiteral,
+    FunctionLiteral,
     Function,
     Identifier,
     UnaryExpression,
@@ -300,6 +301,29 @@ class ASTFunction: ASTNode
     override void print(string indent = "")
     {
         writeln(indent, type, " ", name);
+        foreach(ASTNode child; bodyBlock.children)
+        {
+            child.print(indent ~ "  ");
+        }
+    }
+}
+
+class ASTFunctionLiteral: ASTNode
+{
+    string generatedName;
+    string[] arguments;
+    ASTBlock bodyBlock;
+    
+    this(string[] arguments, ASTBlock bodyBlock)
+    {
+        super(NodeType.FunctionLiteral, "");
+        this.arguments = arguments;
+        this.bodyBlock = bodyBlock;
+    }
+    
+    override void print(string indent = "")
+    {
+        writeln(indent, type);
         foreach(ASTNode child; bodyBlock.children)
         {
             child.print(indent ~ "  ");
@@ -616,6 +640,20 @@ class GsParser
             auto node = new ASTNode(NodeType.ObjectLiteral, "");
             parseObject(node);
             return node;
+        }
+        else if (currentToken.value == "func")
+        {
+            eat(GsTokenType.Keyword); // "func"
+            string[] funcArguments = parseFunctionArguments();
+            ASTBlock funcBody = new ASTBlock();
+            funcBody.programScope = program.pushScope();
+            foreach(arg; funcArguments)
+                funcBody.programScope.defineArgument(arg);
+            parseBlock(funcBody);
+            program.popScope();
+            auto func = new ASTFunctionLiteral(funcArguments, funcBody);
+            func.programScope = program.peekScope();
+            return func;
         }
         else if (currentToken.type == GsTokenType.Identifier)
         {

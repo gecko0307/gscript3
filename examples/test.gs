@@ -1,14 +1,10 @@
-func getLocation()
-{
-    return "New York";
-}
-
-const person = {
-    name: "John Doe",
-    age: 30,
-    location: getLocation()
+const obj = {
+    x: 100,
+    foo: func(this, x)
+    {
+        this.x += x;
+        print this.x;
+    }
 };
 
-print person.name;
-print person.age;
-print person.location;
+obj.foo(10);
