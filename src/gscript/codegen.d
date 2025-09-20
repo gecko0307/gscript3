@@ -27,6 +27,7 @@ DEALINGS IN THE SOFTWARE.
 */
 module gscript.codegen;
 
+import std.stdio;
 import std.variant;
 import std.array;
 import std.conv;
@@ -94,6 +95,14 @@ class GsCodeGenerator
             // Default return 0
             instructions ~= GsInstruction(GsInstructionType.PUSH, Variant(cast(double)0.0));
             instructions ~= GsInstruction(GsInstructionType.RET);
+        }
+        else if (node.type == NodeType.Function)
+        {
+            auto func = cast(ASTFunction)node;
+            
+            auto instr = generateLambdas(func.bodyBlock);
+            if (instr.length)
+                instructions ~= instr;
         }
         else
         {
@@ -390,67 +399,117 @@ class GsCodeGenerator
         
         return instructions;
     }
-
+    
+    void error(string msg)
+    {
+        // TODO: better error message, store file and line
+        writeln("Codegen error: ", msg);
+    }
+    
     GsInstruction[] generate(GsProgram program)
     {
-        ASTNode[] ast = program.ast;
-        
         globalScope = program.rootScope;
-        
-        GsInstruction[] instructions;
-        
-        GsInstruction[] functions;
+        GsInstruction[] output;
         
         size_t numFunctions = 0;
         
-        // Store functions in global variables
-        foreach(ASTNode node; ast)
+        // Store all functions in global variables
+        foreach(modul; program.modulesInImportOrder)
         {
-            if (node.type == NodeType.Function)
+            ASTNode[] ast = modul.ast;
+            
+            foreach(ASTNode node; ast)
             {
-                auto func = cast(ASTFunction)node;
-                
-                globalScope.defineVariable(func.name, true);
-                instructions ~= GsInstruction(GsInstructionType.PUSH, Variant(func.name));
-                instructions ~= GsInstruction(GsInstructionType.STORE_VAR, Variant(cast(double)numFunctions));
-                numFunctions++;
+                if (node.type == NodeType.Function)
+                {
+                    auto func = cast(ASTFunction)node;
+                    
+                    try
+                    {
+                        globalScope.defineVariable(func.name, true);
+                        output ~= GsInstruction(GsInstructionType.PUSH, Variant(func.name));
+                        output ~= GsInstruction(GsInstructionType.STORE_VAR, Variant(cast(double)numFunctions));
+                        numFunctions++;
+                    }
+                    catch(Exception e)
+                    {
+                        error(e.msg);
+                        return [];
+                    }
+                }
             }
         }
         
         // Generate code for the global context
-        foreach(ASTNode node; ast)
+        foreach(modul; program.modulesInImportOrder)
         {
-            instructions ~= generate(node);
-        }
-        
-        instructions ~= GsInstruction(GsInstructionType.HALT);
-        
-        // Generate code for functions
-        foreach(ASTNode node; ast)
-        {
-            if (node.type == NodeType.Function)
+            ASTNode[] ast = modul.ast;
+            
+            foreach(ASTNode node; ast)
             {
-                auto func = cast(ASTFunction)node;
-                // TODO: qualified name
-                instructions ~= GsInstruction(GsInstructionType.LABEL, Variant(func.name));
-                
-                // Function body
-                instructions ~= generate(func.bodyBlock);
-                
-                // Default return 0
-                instructions ~= GsInstruction(GsInstructionType.PUSH, Variant(cast(double)0.0));
-                instructions ~= GsInstruction(GsInstructionType.RET);
+                try
+                {
+                    output ~= generate(node);
+                }
+                catch(Exception e)
+                {
+                    error(e.msg);
+                    return [];
+                }
             }
         }
         
-        // Generate code for anonymous fuctions
-        foreach(ASTNode node; ast)
+        // Terminate the global context
+        output ~= GsInstruction(GsInstructionType.HALT);
+        
+        // Generate code for all functions
+        foreach(modul; program.modulesInImportOrder)
         {
-            auto instr = generateLambdas(node);
-            if (instr.length)
-                instructions ~= instr;
+            ASTNode[] ast = modul.ast;
+            
+            // Free functions
+            foreach(ASTNode node; ast)
+            {
+                if (node.type == NodeType.Function)
+                {
+                    auto func = cast(ASTFunction)node;
+                    // TODO: qualified name
+                    output ~= GsInstruction(GsInstructionType.LABEL, Variant(func.name));
+                    
+                    // Function body
+                    try
+                    {
+                        output ~= generate(func.bodyBlock);
+                    }
+                    catch(Exception e)
+                    {
+                        error(e.msg);
+                        return [];
+                    }
+                    
+                    // Default return 0
+                    output ~= GsInstruction(GsInstructionType.PUSH, Variant(cast(double)0.0));
+                    output ~= GsInstruction(GsInstructionType.RET);
+                }
+            }
+            
+            // Anonymous fuctions
+            foreach(ASTNode node; ast)
+            {
+                try
+                {
+                    auto instr = generateLambdas(node);
+                    if (instr.length)
+                        output ~= instr;
+                }
+                catch(Exception e)
+                {
+                    error(e.msg);
+                    return [];
+                }
+            }
         }
         
-        return instructions;
+        return output;
     }
 }

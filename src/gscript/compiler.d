@@ -27,25 +27,107 @@ DEALINGS IN THE SOFTWARE.
 */
 module gscript.compiler;
 
+import std.stdio;
+import std.file;
+import std.path;
+
 import gscript.lexer;
 import gscript.parser;
 import gscript.codegen;
 import gscript.instruction_set;
 
-GsInstruction[] compile(string script, string filename = "")
+bool parseModule(GsProgram program, GsModule modul, string script, string filename, string importDirectory)
 {
-    GsLexer lexer = new GsLexer(script);
-    GsParser parser = new GsParser(lexer, filename);
-    GsProgram program = new GsProgram();
-    if (parser.parseProgram(program))
+    if (!modul.ready)
     {
+        GsLexer lexer = new GsLexer(script);
+        GsParser parser = new GsParser(lexer, filename);
+        if (parser.parseModule(program, modul))
+        {
+            modul.ready = true;
+            bool res = true;
+            foreach(importFilename; modul.imports)
+            {
+                if (!program.isModuleImported(importFilename))
+                {
+                    GsModule newModul = program.importModule(importFilename);
+                    if (!newModul.ready)
+                    {
+                        string importScript = readText(buildPath(importDirectory, importFilename));
+                        res = parseModule(program, newModul, importScript, importFilename, importDirectory);
+                        if (!res)
+                            break;
+                    }
+                }
+            }
+            
+            return res;
+        }
+        else
+        {
+            modul.ready = true;
+            return false;
+        }
+    }
+    else
+        return true;
+}
+
+GsInstruction[] compile(string script, string moduleFilename = "")
+{
+    GsProgram program = new GsProgram(moduleFilename);
+    GsModule mainModule = program.mainModule;
+    
+    GsLexer lexer = new GsLexer(script);
+    GsParser parser = new GsParser(lexer, moduleFilename);
+    if (parser.parseModule(program, mainModule))
+    {
+        mainModule.ready = true;
+        
+        // TODO: user-defined import paths
+        string importDirectory = "";
+        if (moduleFilename.length > 0)
+        {
+            importDirectory = dirName(moduleFilename);
+        }
+        
+        bool res = true;
+        
+        foreach(importFilename; mainModule.imports)
+        {
+            program.importModule(importFilename);
+        }
+        
+        foreach(importFilename; mainModule.imports)
+        {
+            GsModule modul = program.importModule(importFilename);
+            if (!modul.ready)
+            {
+                string importScript = readText(buildPath(importDirectory, importFilename));
+                res = parseModule(program, modul, importScript, importFilename, importDirectory);
+                if (!res)
+                    break;
+            }
+        }
+        
+        if (!res)
+            return[];
+        
+        GsCodeGenerator cg = new GsCodeGenerator();
+        
         debug
         {
-            foreach(ASTNode node; program.ast)
-                node.print();
+            foreach(m; program.modulesInImportOrder)
+            {
+                writeln(m.filename, ":");
+                foreach(ASTNode node; m.ast)
+                    node.print("  ");
+            }
         }
-        GsCodeGenerator cg = new GsCodeGenerator();
-        return cg.generate(program);
+        
+        GsInstruction[] instr = cg.generate(program);
+        
+        return instr;
     }
     else
         return [];

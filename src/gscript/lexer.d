@@ -127,8 +127,10 @@ class GsLexer
     ];
     
     string[] keywords = [
-        "let", "const", "func",
-        "if", "else", "while", "return"
+        "let", "const", "func", "return",
+        "if", "else", "while",
+        "import", "as",
+        "print"
     ];
     
     string[] operators = [

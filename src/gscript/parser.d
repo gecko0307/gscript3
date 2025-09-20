@@ -331,19 +331,84 @@ class ASTFunctionLiteral: ASTNode
     }
 }
 
+class GsModule
+{
+  protected:
+    GsProgram program;
+    string _filename;
+    ASTNode[] statements;
+    
+  public:
+    string[] imports;
+    bool ready = false;
+    
+    this(GsProgram program, string name)
+    {
+        this.program = program;
+        this._filename = name;
+    }
+    
+    string filename()
+    {
+        return _filename;
+    }
+    
+    void addStatement(ASTNode stat)
+    {
+        statements ~= stat;
+        stat.programScope = program.peekScope();
+    }
+    
+    void addStatementFront(ASTNode stat)
+    {
+        statements = stat ~ statements;
+        stat.programScope = program.peekScope();
+    }
+    
+    ASTNode[] ast()
+    {
+        return statements;
+    }
+}
+
 class GsProgram
 {
   protected:
     Scope _rootScope;
     Scope[] scopeStack;
     size_t scopeStackPointer = 0;
-    ASTNode[] statements;
     
   public:
-    this()
+    GsModule[string] importedModules;
+    GsModule mainModule;
+    GsModule[] modulesInImportOrder;
+    
+    this(string mainModuleFilename)
     {
         scopeStack = new Scope[1024];
         _rootScope = pushScope();
+        mainModule = new GsModule(this, mainModuleFilename);
+        modulesInImportOrder ~= mainModule;
+    }
+    
+    GsModule importModule(string filename)
+    {
+        if (!(filename in importedModules))
+        {
+            auto m = new GsModule(this, filename);
+            importedModules[filename] = m;
+            modulesInImportOrder = [m] ~ modulesInImportOrder;
+            return m;
+        }
+        else return importedModules[filename];
+    }
+    
+    bool isModuleImported(string filename)
+    {
+        if (filename in importedModules)
+            return true;
+        else
+            return false;
     }
     
     Scope pushScope(bool inherit = false)
@@ -368,20 +433,14 @@ class GsProgram
         return scopeStack[scopeStackPointer - 1];
     }
     
-    void addStatement(ASTNode stat)
-    {
-        statements ~= stat;
-        stat.programScope = peekScope();
-    }
-    
-    ASTNode[] ast()
-    {
-        return statements;
-    }
-    
     Scope rootScope()
     {
         return _rootScope;
+    }
+    
+    bool isRootScope()
+    {
+        return scopeStackPointer == 1;
     }
 }
 
@@ -392,14 +451,17 @@ class GsParser
     string filename;
     GsToken currentToken;
     GsProgram program;
+    GsModule modul;
+    bool isImport = false;
     bool running = false;
 
    public:
-    this(GsLexer lexer, string filename)
+    this(GsLexer lexer, string filename, bool isImport = false)
     {
         this.lexer = lexer;
         this.filename = filename;
         this.currentToken = lexer.nextToken();
+        this.isImport = isImport;
         running = true;
     }
     
@@ -746,23 +808,31 @@ class GsParser
     {
         if (currentToken.value == "func")
         {
-            eat(GsTokenType.Keyword); // "func"
-            string name = currentToken.value;
-            eat(GsTokenType.Identifier);
-            string[] funcArguments = parseFunctionArguments();
-            ASTBlock funcBody = new ASTBlock();
-            funcBody.programScope = program.pushScope();
-            foreach(arg; funcArguments)
-                funcBody.programScope.defineArgument(arg);
-            parseBlock(funcBody);
-            program.popScope();
-            auto func = new ASTFunction(name, funcArguments, funcBody);
-            func.programScope = program.peekScope();
-            return func;
+            if (program.isRootScope)
+            {
+                eat(GsTokenType.Keyword); // "func"
+                string name = currentToken.value;
+                eat(GsTokenType.Identifier);
+                string[] funcArguments = parseFunctionArguments();
+                ASTBlock funcBody = new ASTBlock();
+                funcBody.programScope = program.pushScope();
+                foreach(arg; funcArguments)
+                    funcBody.programScope.defineArgument(arg);
+                parseBlock(funcBody);
+                program.popScope();
+                auto func = new ASTFunction(name, funcArguments, funcBody);
+                func.programScope = program.peekScope();
+                return func;
+            }
+            else
+            {
+                stop("Nested free functions are not allowed");
+                return null;
+            }
         }
         else if (currentToken.value == "print")
         {
-            eat(GsTokenType.Identifier);
+            eat(GsTokenType.Keyword); // print
             ASTNode expr = parseExpression();
             eat(GsTokenType.Semicolon); // ';'
             auto stat = new ASTNode(NodeType.PrintStatement, "", [expr]);
@@ -799,6 +869,67 @@ class GsParser
             auto stat = new ASTNode(NodeType.ReturnStatement, "", [returnExpr]);
             stat.programScope = program.peekScope();
             return stat;
+        }
+        else if (currentToken.value == "import")
+        {
+            eat(GsTokenType.Keyword); // import
+            if (currentToken.type == GsTokenType.String)
+            {
+                string importFilename = currentToken.value;
+                eat(GsTokenType.String); // filename
+                if (importFilename.length > 2)
+                    importFilename = importFilename[1..$-1];
+                else
+                {
+                    stop("Illegal import: " ~ importFilename);
+                    return null;
+                }
+                
+                if (currentToken.value != "as")
+                {
+                    stop("\"as\" expected, not \"" ~ currentToken.value ~ "\"");
+                    return null;
+                }
+                eat(GsTokenType.Keyword); // as
+                
+                string importName = currentToken.value;
+                eat(GsTokenType.Identifier); // import name
+                eat(GsTokenType.Semicolon); // ";"
+                
+                // ConstStatement <importName>
+                //   AssignExpression =
+                //   MemberPropertyAccessExpression <importName>
+                //     Identifier global
+                
+                if (!program.isModuleImported(importFilename))
+                {
+                    modul.imports = [importFilename] ~ modul.imports;
+                    
+                    ASTNode globalExpr = new ASTNode(NodeType.Identifier, "global");
+                    globalExpr.programScope = program.peekScope();
+                    
+                    ASTNode importIdentifier = new ASTNode(NodeType.Identifier, importName);
+                    importIdentifier.programScope = program.peekScope();
+                    
+                    ASTNode importPropAccessExpr = new ASTNode(NodeType.MemberPropertyAccessExpression, importName, [globalExpr]);
+                    importPropAccessExpr.programScope = program.peekScope();
+                    
+                    ASTNode importAssignmentExpr = new ASTNode(NodeType.AssignExpression, "=", [importIdentifier, importPropAccessExpr]);
+                    importAssignmentExpr.programScope = program.peekScope();
+                    
+                    ASTNode importStat = new ASTNode(NodeType.ConstStatement, importName, [importAssignmentExpr]);
+                    importStat.programScope = program.peekScope();
+                    
+                    return importStat;
+                }
+                else
+                    return null;
+            }
+            else
+            {
+                stop("Nested free functions are not allowed");
+                return null;
+            }
         }
         else
         {
@@ -839,15 +970,19 @@ class GsParser
         return args;
     }
 
-    bool parseProgram(GsProgram program)
+    bool parseModule(GsProgram program, GsModule modul)
     {
         this.program = program;
+        this.modul = modul;
         
         while(running && currentToken.type != GsTokenType.EOF)
         {
             auto statement = parseStatement();
-            statement.programScope = program.peekScope();
-            program.addStatement(statement);
+            if (statement)
+            {
+                statement.programScope = program.peekScope();
+                modul.addStatement(statement);
+            }
         }
         
         return running;
@@ -861,8 +996,11 @@ class GsParser
             if (currentToken.type == GsTokenType.ClosingCurlyBracket)
                 break;
             auto statement = parseStatement();
-            statement.programScope = program.peekScope();
-            parentBlock.children ~= statement;
+            if (statement)
+            {
+                statement.programScope = program.peekScope();
+                parentBlock.children ~= statement;
+            }
         }
         eat(GsTokenType.ClosingCurlyBracket); // }
     }

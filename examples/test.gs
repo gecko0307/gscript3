@@ -1,10 +1,2 @@
-const obj = {
-    x: 100,
-    foo: func(this, x)
-    {
-        this.x += x;
-        print this.x;
-    }
-};
+print "Hello, World!";
 
-obj.foo(10);
