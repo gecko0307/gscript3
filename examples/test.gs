@@ -1,2 +1,3 @@
-print "Hello, World!";
+import "foo.gs" as foo;
 
+foo.test();
