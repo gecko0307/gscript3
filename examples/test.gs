@@ -1,10 +1,9 @@
-func test
-{
-    const args = $$;
-    print args.length;
-    args[0] = 100;
-    print $$;
-}
+const obj = {
+    foo: "bar",
+    printFoo: func(self)
+    {
+        print self.foo;
+    }
+};
 
-test(5, 10, 20);
-
+obj.printFoo();

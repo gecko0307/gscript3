@@ -26,7 +26,7 @@ Work-in-progress third iteration of GScript, a mini scripting language for D. Fu
 - `const` support
 - Global execution context (instead of mandatory `main` function)
 - Direct access to global variables, without `global`. `global` object is still there, for imports and externally defined properties
-- JS-like object literals istead of prototype functions: `{ foo: "bar" }`
+- JS-like object literals istead of prototype functions; see below
 - Prototype inheritance instead of shallow-copy; see below
 - New module system; see below
 - A new, more efficient variadic arguments system; see below
@@ -39,6 +39,44 @@ Architecture improvements:
 - Standard `Variant` as a basis for the dynamic type system
 - Bytecode can now be serialized into a binary buffer, significantly speeding up the launch of compiled scripts
 - Tighter integration with the D object system. Any D object that inherits from `GsObject` and implements get/set semantics for its properties can be registered in the VM. This gives scripts secure access to the application's internal state.
+
+## Objects and Methods
+Objects (key-value collections) are created using JS-like syntax. Objects can have methods (function properties) that always implicitly receive a reference to object itself as a first argument when called.
+
+```
+const obj = {
+    foo: "bar",
+    printFoo: func(self)
+    {
+        print self.foo;
+    }
+};
+
+obj.printFoo();
+```
+
+## Prototype-Based Inheritance
+GScript3 implements prototype-based OOP. Objects are created from other objects (prototypes), and property lookup follows the prototype chain: it first checks the object itself; if not found, it falls back to the prototype.
+
+Example:
+
+```
+const obj = {
+    foo: "bar",
+    test: func(self)
+    {
+        print self.foo;
+    }
+};
+
+const f = new obj;
+
+obj.prop = 10; // property is changed in the prototype
+obj.test();      // prints 10 (inherited from prototype)
+
+obj.prop = 5;
+obj.test();      // prints 5 (now overrides prototype property)
+```
 
 ## Modules
 GScript3 implements object-based module system. To reuse code, store it in the `global` object under the name which should be used for importing. Typically this should be a singleton object with properties and methods:
@@ -67,23 +105,6 @@ Foo.test();
 `Foo` in this case is just an automatically defined shorthand for `global.Foo`.
 
 Currently there is no module-local scope! All root-level definitions are placed in one global scope, so it is not recommended to define global variables and free functions in modules to avoid name conflicts.
-
-## Prototype-Based Inheritance
-GScript3 uses a prototype-based OOP, similar to JavaScript. Objects are created from other objects (prototypes), and property lookup follows the prototype chain: it first checks the object itself; if not found, it falls back to the prototype.
-
-Example:
-
-```
-import Foo from "foo.gs";
-
-const f = new Foo;
-
-Foo.prop = 10; // property is changed in the prototype
-f.test();      // prints 10 (inherited from prototype)
-
-f.prop = 5;
-f.test();      // prints 5 (now overrides prototype property)
-```
 
 ## Variadic Arguments
 In GScript3, all functions can accept any number of arguments. Named arguments list is optional. Anonymous arguments are accessed with `$` operator:
