@@ -52,6 +52,8 @@ enum NodeType
     ReturnStatement,
     PrintStatement,
     IfStatement,
+    WhileStatement,
+    ForStatement,
     Block,
     FunctionCallExpression,
     IndexAccessExpression,
@@ -861,6 +863,41 @@ class GsParser
             ASTNode ifStatement = new ASTNode(NodeType.IfStatement, "", children);
             ifStatement.programScope = program.peekScope();
             return ifStatement;
+        }
+        else if (currentToken.value == "while")
+        {
+            eat(GsTokenType.Keyword); // "while"
+            
+            ASTNode conditionExpr = parseExpression();
+            
+            ASTBlock loopBlock = new ASTBlock();
+            loopBlock.programScope = program.pushScope(true);
+            parseImplicitBlock(loopBlock);
+            program.popScope();
+            
+            ASTNode whileStatement = new ASTNode(NodeType.WhileStatement, "", [conditionExpr, loopBlock]);
+            whileStatement.programScope = program.peekScope();
+            return whileStatement;
+        }
+        else if (currentToken.value == "for")
+        {
+            eat(GsTokenType.Keyword); // "for"
+            eat(GsTokenType.OpeningBracket); // "("
+            ASTNode initExpr = parseStatement();
+            //eat(GsTokenType.Semicolon); // ";"
+            ASTNode conditionExpr = parseExpression();
+            eat(GsTokenType.Semicolon); // ";"
+            ASTNode advanceExpr = parseExpression();
+            eat(GsTokenType.ClosingBracket); // "("
+            
+            ASTBlock loopBlock = new ASTBlock();
+            loopBlock.programScope = program.pushScope(true);
+            parseImplicitBlock(loopBlock);
+            program.popScope();
+            
+            ASTNode forStatement = new ASTNode(NodeType.ForStatement, "", [initExpr, conditionExpr, advanceExpr, loopBlock]);
+            forStatement.programScope = program.peekScope();
+            return forStatement;
         }
         else if (currentToken.value == "func")
         {

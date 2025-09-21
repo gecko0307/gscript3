@@ -408,6 +408,30 @@ class GsCodeGenerator
                 }
                 break;
             
+            case NodeType.WhileStatement:
+                string labelStartWhile = getLabel();
+                string labelEndWhile = getLabel();
+                instructions ~= GsInstruction(GsInstructionType.LABEL, Variant(labelStartWhile));
+                instructions ~= generate(node.children[0]); // condition
+                instructions ~= GsInstruction(GsInstructionType.JMP_IF_NOT, Variant(labelEndWhile));
+                instructions ~= generate(node.children[1]); // loop
+                instructions ~= GsInstruction(GsInstructionType.JMP, Variant(labelStartWhile));
+                instructions ~= GsInstruction(GsInstructionType.LABEL, Variant(labelEndWhile));
+                break;
+            
+            case NodeType.ForStatement:
+                string labelStartFor = getLabel();
+                string labelEndFor = getLabel();
+                instructions ~= generate(node.children[0]); // initialization
+                instructions ~= GsInstruction(GsInstructionType.LABEL, Variant(labelStartFor));
+                instructions ~= generate(node.children[1]); // condition
+                instructions ~= GsInstruction(GsInstructionType.JMP_IF_NOT, Variant(labelEndFor));
+                instructions ~= generate(node.children[2]); // loop
+                instructions ~= generate(node.children[3]); // advancement
+                instructions ~= GsInstruction(GsInstructionType.JMP, Variant(labelStartFor));
+                instructions ~= GsInstruction(GsInstructionType.LABEL, Variant(labelEndFor));
+                break;
+            
             case NodeType.Function:
                 // No-op
                 break;
