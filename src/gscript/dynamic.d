@@ -115,6 +115,10 @@ struct GsDynamic
                 return asArray.to!string;
             case GsDynamicType.Object:
                 return asObject.to!string;
+            case GsDynamicType.NativeMethod:
+                return "delegate";
+            case GsDynamicType.NativeFunction:
+                return "function";
             default:
                 return "undefined";
         }

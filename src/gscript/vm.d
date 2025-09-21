@@ -42,6 +42,20 @@ interface GsObject
     void set(string key, GsDynamic value);
     bool contains(string key);
     GsObject dup();
+    
+    final GsDynamic opIndex(string key)
+    {
+        if (contains(key))
+            return get(key);
+        else
+            return GsDynamic();
+    }
+    
+    final T opIndexAssign(T)(T value, string key)
+    {
+        set(key, GsDynamic(value));
+        return value;
+    }
 }
 
 class GsGCObject: GsObject
@@ -280,6 +294,7 @@ class GsVirtualMachine: GsObject
     {
         return (key in globals) !is null;
     }
+    
     
     GsObject dup()
     {

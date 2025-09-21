@@ -160,7 +160,7 @@ GsDynamic printSum(GsDynamic[] args)
     return GsDynamic(0);
 }
 
-vm.set("printSum", GsDynamic(&printSum));
+vm["printSum"] = &printSum;
 ```
 
 Script:
@@ -219,7 +219,7 @@ class MyObj: GsObject
 }
 
 TestObj test = new TestObj();
-vm.set("test", GsDynamic(test));
+vm["test"] = test;
 ```
 
 Script:

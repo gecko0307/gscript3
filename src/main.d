@@ -137,10 +137,10 @@ void main(string[] args)
     GsDynamic[] arr = [GsDynamic(0.0), GsDynamic(40.0), GsDynamic("Hello, World!"), GsDynamic(&printSum)];
 
     auto vm = new GsVirtualMachine();
-    vm.set("foo", GsDynamic(100));
-    vm.set("printSum", GsDynamic(&printSum));
-    vm.set("test", GsDynamic(test));
-    vm.set("arr", GsDynamic(arr));
+    vm["foo"] = 100;
+    vm["printSum"] = &printSum;
+    vm["test"] = test;
+    vm["arr"] = arr;
     vm.load(instructions);
     vm.run();
     
