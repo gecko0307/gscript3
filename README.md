@@ -37,7 +37,6 @@ Work-in-progress third iteration of GScript, a mini scripting language for D. Fu
 
 Architecture improvements:
 - A more efficient ISA
-- Standard `Variant` as a basis for the dynamic type system
 - Bytecode can now be serialized into a binary buffer, significantly speeding up the launch of compiled scripts
 - Tighter integration with the D object system. Any D object that inherits from `GsObject` and implements get/set semantics for its properties can be registered in the VM. This gives scripts secure access to the application's internal state.
 
