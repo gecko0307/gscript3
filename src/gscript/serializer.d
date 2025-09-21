@@ -29,6 +29,7 @@ module gscript.serializer;
 
 import std.conv;
 import std.utf;
+
 import gscript.instruction_set;
 import gscript.dynamic;
 

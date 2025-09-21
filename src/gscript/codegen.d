@@ -65,7 +65,7 @@ class GsCodeGenerator
     ];
     
     string[] builtins = [
-        "remove", "removeFront", "removeBack", "insert"
+        "remove", "removeFront", "removeBack", "insert", "slice"
     ];
     
     Scope globalScope;

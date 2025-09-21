@@ -32,6 +32,7 @@ import std.conv;
 import std.algorithm;
 import std.array;
 import std.string;
+
 import gscript.instruction_set;
 import gscript.dynamic;
 
@@ -179,20 +180,6 @@ class GsAssembler
             case "STORE_ARG":
                 result = GsInstruction(GsInstructionType.STORE_ARG, operand);
                 break;
-            /*
-            case "LOAD_VAR_AT":
-                result = GsInstruction(GsInstructionType.LOAD_VAR_AT, operand);
-                break;
-            case "STORE_VAR_AT":
-                result = GsInstruction(GsInstructionType.STORE_VAR_AT, operand);
-                break;
-            case "LOAD_ARG_AT":
-                result = GsInstruction(GsInstructionType.LOAD_ARG_AT, operand);
-                break;
-            case "STORE_ARG_AT":
-                result = GsInstruction(GsInstructionType.STORE_ARG_AT, operand);
-                break;
-            */
             case "NEW":
                 result = GsInstruction(GsInstructionType.NEW);
                 break;
@@ -210,6 +197,21 @@ class GsAssembler
                 break;
             case "ARRAY":
                 result = GsInstruction(GsInstructionType.ARRAY);
+                break;
+            case "GLOBAL_LOAD_VAR":
+                result = GsInstruction(GsInstructionType.GLOBAL_LOAD_VAR);
+                break;
+            case "GLOBAL_STORE_VAR":
+                result = GsInstruction(GsInstructionType.GLOBAL_STORE_VAR);
+                break;
+            case "INIT_SET":
+                result = GsInstruction(GsInstructionType.INIT_SET, operand);
+                break;
+            case "REUSE":
+                result = GsInstruction(GsInstructionType.REUSE);
+                break;
+            case "LOAD_ARGS":
+                result = GsInstruction(GsInstructionType.LOAD_ARGS);
                 break;
             default:
                 throw new Exception("Unknown instruction: " ~ mnemonic);

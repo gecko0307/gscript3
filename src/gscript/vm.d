@@ -34,116 +34,7 @@ import std.algorithm;
 
 import gscript.instruction_set;
 import gscript.dynamic;
-
-class LabelMap
-{
-    private struct Entry
-    {
-        string key;
-        size_t value;
-        bool used;
-        bool filled;
-    }
-
-    private Entry[] table;
-    private size_t count;
-    private size_t mask;
-
-    this(size_t capacity)
-    {
-        size_t cap = 1;
-        while (cap < capacity * 2) cap <<= 1;
-        table = new Entry[cap];
-        mask = cap - 1;
-    }
-
-    private size_t hash(string s) const
-    {
-        ulong h = 1469598103934665603UL;
-        foreach (ubyte c; s) {
-            h ^= c;
-            h *= 1099511628211UL;
-        }
-        return cast(size_t)h;
-    }
-
-    void add(string key, size_t value)
-    {
-        if (count * 2 >= table.length) rehash();
-        insert(key, value);
-    }
-
-    private void insert(string key, size_t value)
-    {
-        size_t i = hash(key) & mask;
-        while (table[i].filled)
-        {
-            if (table[i].key == key)
-            {
-                table[i].value = value;
-                return;
-            }
-            i = (i + 1) & mask;
-        }
-        table[i] = Entry(key, value, true, true);
-        count++;
-    }
-
-    bool remove(string key)
-    {
-        size_t i = hash(key) & mask;
-        while (table[i].used)
-        {
-            if (table[i].filled && table[i].key == key)
-            {
-                table[i].filled = false;
-                count--;
-                return true;
-            }
-            i = (i + 1) & mask;
-        }
-        return false;
-    }
-
-    size_t* opBinaryRight(string op: "in")(string key)
-    {
-        size_t i = hash(key) & mask;
-        while (table[i].used) {
-            if (table[i].filled && table[i].key == key)
-                return &table[i].value;
-            i = (i + 1) & mask;
-        }
-        return null;
-    }
-
-    size_t opIndex(string key)
-    {
-        auto p = key in this;
-        if (!p) throw new Exception("Key not found: "~key);
-        return *p;
-    }
-    
-    size_t opIndexAssign(size_t v, string k)
-    {
-        add(k, v);
-        return v;
-    }
-
-    private void rehash()
-    {
-        auto old = table;
-        size_t cap = table.length * 2;
-        table.length = cap;
-        foreach (ref e; table) e = Entry.init;
-        mask = cap - 1;
-        count = 0;
-        foreach (ref e; old)
-        {
-            if (e.filled)
-                insert(e.key, e.value);
-        }
-    }
-}
+import gscript.labelmap;
 
 interface GsObject
 {
@@ -232,15 +123,14 @@ GsDynamic vmBuiltinRemove(GsDynamic[] args)
     if (args.length < 2)
         return args[0];
     
-    //if (args[0].peek!(GsDynamic[]) is null)
     if (args[0].type != GsDynamicType.Array)
         return args[0];
     
-    auto arr = args[0].asArray; //args[0].get!(GsDynamic[]);
+    auto arr = args[0].asArray;
     if (arr.length == 0)
         return GsDynamic(arr);
     
-    auto removeIndex = cast(size_t)args[1].asNumber; //args[1].get!(double);
+    auto removeIndex = cast(size_t)args[1].asNumber;
     auto newArr = new GsDynamic[arr.length - 1];
     for (size_t i = 0; i < arr.length; i++)
     {
@@ -254,11 +144,10 @@ GsDynamic vmBuiltinRemove(GsDynamic[] args)
 
 GsDynamic vmBuiltinRemoveFront(GsDynamic[] args)
 {
-    //if (args[0].peek!(GsDynamic[]) is null)
     if (args[0].type != GsDynamicType.Array)
         return args[0];
     
-    auto arr = args[0].asArray; //args[0].get!(GsDynamic[]);
+    auto arr = args[0].asArray;
     if (arr.length == 0)
         return GsDynamic(arr);
     
@@ -272,11 +161,10 @@ GsDynamic vmBuiltinRemoveFront(GsDynamic[] args)
 
 GsDynamic vmBuiltinRemoveBack(GsDynamic[] args)
 {
-    //if (args[0].peek!(GsDynamic[]) is null)
     if (args[0].type != GsDynamicType.Array)
         return args[0];
     
-    auto arr = args[0].asArray; //args[0].get!(GsDynamic[]);
+    auto arr = args[0].asArray;
     if (arr.length == 0)
         return GsDynamic(arr);
     
@@ -293,12 +181,11 @@ GsDynamic vmBuiltinInsert(GsDynamic[] args)
     if (args.length < 3)
         return args[0];
     
-    //if (args[0].peek!(GsDynamic[]) is null)
     if (args[0].type != GsDynamicType.Array)
         return args[0];
     
-    auto arr = args[0].asArray; //args[0].get!(GsDynamic[]);
-    auto insertIndex = cast(size_t)args[1].asNumber; //cast(size_t)args[1].get!(double);
+    auto arr = args[0].asArray;
+    auto insertIndex = cast(size_t)args[1].asNumber;
     if (insertIndex < 0)
         return args[0];
     
@@ -317,6 +204,30 @@ GsDynamic vmBuiltinInsert(GsDynamic[] args)
     return GsDynamic(newArr);
 }
 
+GsDynamic vmBuiltinSlice(GsDynamic[] args)
+{
+    if (args.length < 3)
+        return args[0];
+    
+    if (args[0].type != GsDynamicType.Array)
+        return args[0];
+    
+    auto arr = args[0].asArray;
+    
+    auto sliceStartIndex = cast(size_t)args[1].asNumber;
+    if (sliceStartIndex < 0 || sliceStartIndex >= arr.length)
+        return args[0];
+    
+    auto sliceEndIndex = cast(size_t)args[2].asNumber;
+    if (sliceEndIndex < sliceStartIndex || sliceEndIndex > arr.length)
+        return args[0];
+    
+    if (sliceEndIndex == sliceStartIndex)
+        return GsDynamic([]);
+    else
+        return GsDynamic(arr[sliceStartIndex..sliceEndIndex]);
+}
+
 class GsVirtualMachine: GsObject
 {
   protected:
@@ -329,13 +240,13 @@ class GsVirtualMachine: GsObject
     size_t cp;                     // Call stack pointer
 
     LabelMap jumpTable;            // Function table mapping names to instruction indices
-    GsDynamic[string] globals;       // Built-in variables
+    GsDynamic[string] globals;     // Built-in variables
     
   public:
 
     this()
     {
-        this.stack = new GsDynamic[256];          // Fixed stack size
+        this.stack = new GsDynamic[256];        // Fixed stack size
         this.callStack = new size_t[256];       // Fixed call stack size
         this.callFrames = new GsCallFrame[256]; // Initialize empty call stack
         this.ip = 0;
@@ -348,6 +259,7 @@ class GsVirtualMachine: GsObject
         set("removeFront", GsDynamic(&vmBuiltinRemoveFront));
         set("removeBack", GsDynamic(&vmBuiltinRemoveBack));
         set("insert", GsDynamic(&vmBuiltinInsert));
+        set("slice", GsDynamic(&vmBuiltinSlice));
     }
     
     GsDynamic get(string key)

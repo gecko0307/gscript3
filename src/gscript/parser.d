@@ -31,6 +31,7 @@ import std.stdio;
 import std.array;
 import std.algorithm;
 import std.conv;
+
 import gscript.lexer;
 
 enum NodeType
