@@ -1,8 +1,15 @@
-let x = 0;
+const Obj = {
+    prop: "bar",
+    test: func(self)
+    {
+        print self.prop;
+    }
+};
 
-while(x < 1000000)
-{
-    x += 1;
-}
+const f = new Obj;
 
-print x;
+Obj.prop = 10;   // property is changed in the prototype
+f.test();        // prints 10 (inherited from prototype)
+
+f.prop = 5;
+f.test();        // prints 5 (now overrides prototype property)

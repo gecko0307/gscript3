@@ -29,7 +29,8 @@ module gscript.instruction_set;
 
 import std.conv;
 import std.traits;
-import std.variant;
+
+import gscript.dynamic;
 
 enum GsInstructionType: ubyte
 {
@@ -93,15 +94,15 @@ enum GsOperandType: ubyte
 struct GsInstruction
 {
     GsInstructionType type;
-    Variant operand;
+    GsDynamic operand;
     
     GsOperandType operandType()
     {
-        if (operand.type is typeid(void))
+        if (operand.type == GsDynamicType.Undefined)
             return GsOperandType.None;
-        else if (operand.type is typeid(string))
+        else if (operand.type == GsDynamicType.String)
             return GsOperandType.String;
-        else if (operand.convertsTo!(double))
+        else if (operand.type == GsDynamicType.Number)
             return GsOperandType.Double;
         else
             return GsOperandType.None;
@@ -109,11 +110,11 @@ struct GsInstruction
     
     string toString()
     {
-        if (operand.type is typeid(void))
+        if (operand.type == GsDynamicType.Undefined)
             return type.to!string;
         else
         {
-            if (operand.type is typeid(string))
+            if (operand.type == GsDynamicType.String)
                 return type.to!string ~ " \"" ~ operand.to!string ~ "\"";
             else
                 return type.to!string ~ " " ~ operand.to!string;

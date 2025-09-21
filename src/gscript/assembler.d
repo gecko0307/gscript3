@@ -30,10 +30,10 @@ module gscript.assembler;
 import std.stdio;
 import std.conv;
 import std.algorithm;
-import std.variant;
 import std.array;
 import std.string;
 import gscript.instruction_set;
+import gscript.dynamic;
 
 class GsAssembler
 {
@@ -60,14 +60,14 @@ class GsAssembler
                 if (statement.endsWith(":")) // Label definition
                 {
                     string label = statement[0..$-1]; // Remove the colon
-                    instructions ~= GsInstruction(GsInstructionType.LABEL, Variant(label));
+                    instructions ~= GsInstruction(GsInstructionType.LABEL, GsDynamic(label));
                 }
                 else
                 {
                     auto parts = statement.split();
                     auto mnemonic = parts[0];
                     auto operandStr = parts.length > 1 ? parts[1..$].join(" ") : null;
-                    Variant operand;
+                    GsDynamic operand;
                     if (operandStr.length)
                         operand = parseOperand(operandStr);
                     instructions ~= parseInstruction(mnemonic, operand);
@@ -81,7 +81,7 @@ class GsAssembler
         return instructions;
     }
 
-    private GsInstruction parseInstruction(string mnemonic, Variant operand)
+    private GsInstruction parseInstruction(string mnemonic, GsDynamic operand)
     {
         GsInstruction result;
         switch(mnemonic.toUpper())
@@ -217,27 +217,27 @@ class GsAssembler
         return result;
     }
 
-    private Variant parseOperand(string operand)
+    private GsDynamic parseOperand(string operand)
     {
         if (operand.startsWith("\"") && operand.endsWith("\""))
         {
-            return Variant(operand[1 .. $-1]); // String literal
+            return GsDynamic(operand[1 .. $-1]); // String literal
         }
         else if (operand == "true" || operand == "false")
         {
-            return Variant(to!bool(operand)); // Boolean
+            return GsDynamic(to!bool(operand)); // Boolean
         }
         else if (operand.canFind("."))
         {
-            return Variant(to!double(operand)); // Floating-point number
+            return GsDynamic(to!double(operand)); // Floating-point number
         }
         else if (operand.canFind("0x"))
         {
-            return Variant(cast(double)to!int(operand, 16)); // Hexadecimal integer
+            return GsDynamic(cast(double)to!int(operand, 16)); // Hexadecimal integer
         }
         else
         {
-            return Variant(cast(double)to!int(operand)); // Integer
+            return GsDynamic(cast(double)to!int(operand)); // Integer
         }
     }
 }

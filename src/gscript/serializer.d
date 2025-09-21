@@ -28,9 +28,9 @@ DEALINGS IN THE SOFTWARE.
 module gscript.serializer;
 
 import std.conv;
-import std.variant;
 import std.utf;
 import gscript.instruction_set;
+import gscript.dynamic;
 
 enum GSIR_MAGIC = "GSIR";
 enum int GSIR_VERSION = 100;
@@ -51,12 +51,12 @@ ubyte[] saveBytecode(GsInstruction[] instructions)
         buffer ~= operandType;
         if (operandType == GsOperandType.Double)
         {
-            double val = instr.operand.get!double;
+            double val = instr.operand.asNumber;
             buffer ~= (cast(ubyte*)&val)[0 .. double.sizeof];
         }
         else if (operandType == GsOperandType.String)
         {
-            auto str = instr.operand.get!string;
+            auto str = instr.operand.asString;
             auto len = cast(uint)str.length;
             buffer ~= (cast(ubyte*)&len)[0 .. uint.sizeof];
             buffer ~= cast(ubyte[])str;
@@ -95,7 +95,7 @@ GsInstruction[] loadBytecode(ubyte[] code)
         auto type = cast(GsInstructionType)code[i++];
         auto operandType = cast(GsOperandType)code[i++];
 
-        Variant operand;
+        GsDynamic operand;
 
         final switch(operandType)
         {
@@ -110,7 +110,7 @@ GsInstruction[] loadBytecode(ubyte[] code)
                     val = *cast(double*)bytes.ptr;
                     i += 8;
 
-                    operand = val;
+                    operand = GsDynamic(val);
                 }
                 break;
 
@@ -127,12 +127,12 @@ GsInstruction[] loadBytecode(ubyte[] code)
                 string str = cast(string)(code[i .. i + len]);
                 validate(str);
 
-                operand = str;
+                operand = GsDynamic(str);
                 i += len;
                 break;
 
             case GsOperandType.None:
-                operand = Variant.init;
+                operand = GsDynamic();
                 break;
         }
 

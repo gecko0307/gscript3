@@ -28,12 +28,13 @@ DEALINGS IN THE SOFTWARE.
 module gscript.codegen;
 
 import std.stdio;
-import std.variant;
 import std.array;
 import std.conv;
 import std.algorithm;
+
 import gscript.parser;
 import gscript.instruction_set;
+import gscript.dynamic;
 
 class GsCodeGenerator
 {
@@ -87,13 +88,13 @@ class GsCodeGenerator
         {
             auto func = cast(ASTFunctionLiteral)node;
             // TODO: qualified name
-            instructions ~= GsInstruction(GsInstructionType.LABEL, Variant(func.label));
+            instructions ~= GsInstruction(GsInstructionType.LABEL, GsDynamic(func.label));
             
             // Function body
             instructions ~= generate(func.bodyBlock);
             
             // Default return 0
-            instructions ~= GsInstruction(GsInstructionType.PUSH, Variant(cast(double)0.0));
+            instructions ~= GsInstruction(GsInstructionType.PUSH, GsDynamic(cast(double)0.0));
             instructions ~= GsInstruction(GsInstructionType.RET);
         }
         else if (node.type == NodeType.Function)
@@ -124,21 +125,21 @@ class GsCodeGenerator
         switch(node.type)
         {
             case NodeType.NumberLiteral:
-                instructions ~= GsInstruction(GsInstructionType.PUSH, Variant(node.value.to!double));
+                instructions ~= GsInstruction(GsInstructionType.PUSH, GsDynamic(node.value.to!double));
                 break;
             
             case NodeType.StringLiteral:
-                instructions ~= GsInstruction(GsInstructionType.PUSH, Variant(node.value[1 .. $-1]));
+                instructions ~= GsInstruction(GsInstructionType.PUSH, GsDynamic(node.value[1 .. $-1]));
                 break;
             
             case NodeType.BooleanLiteral:
-                instructions ~= GsInstruction(GsInstructionType.PUSH, Variant(node.value.to!bool));
+                instructions ~= GsInstruction(GsInstructionType.PUSH, GsDynamic(node.value.to!bool));
                 break;
             
             case NodeType.ArrayLiteral:
                 foreach(child; node.children)
                     instructions ~= generate(child);
-                instructions ~= GsInstruction(GsInstructionType.PUSH, Variant(node.children.length));
+                instructions ~= GsInstruction(GsInstructionType.PUSH, GsDynamic(node.children.length));
                 instructions ~= GsInstruction(GsInstructionType.ARRAY);
                 break;
             
@@ -148,14 +149,14 @@ class GsCodeGenerator
                 {
                     string key = child.value;
                     instructions ~= generate(child.children[0]);
-                    instructions ~= GsInstruction(GsInstructionType.INIT_SET, Variant(key));
+                    instructions ~= GsInstruction(GsInstructionType.INIT_SET, GsDynamic(key));
                 }
                 break;
             
             case NodeType.FunctionLiteral:
                 auto func = cast(ASTFunctionLiteral)node;
                 func.label = getLabel();
-                instructions ~= GsInstruction(GsInstructionType.PUSH, Variant(func.label));
+                instructions ~= GsInstruction(GsInstructionType.PUSH, GsDynamic(func.label));
                 break;
             
             case NodeType.Identifier:
@@ -167,17 +168,17 @@ class GsCodeGenerator
                 else if (node.programScope.isVariableVisible(name))
                 {
                     int index = node.programScope.variableIndex(name);
-                    instructions ~= GsInstruction(GsInstructionType.LOAD_VAR, Variant(cast(double)index));
+                    instructions ~= GsInstruction(GsInstructionType.LOAD_VAR, GsDynamic(cast(double)index));
                 }
                 else if (node.programScope.isArgumentVisible(name))
                 {
                     int index = node.programScope.argumentIndex(name);
-                    instructions ~= GsInstruction(GsInstructionType.LOAD_ARG, Variant(cast(double)index));
+                    instructions ~= GsInstruction(GsInstructionType.LOAD_ARG, GsDynamic(cast(double)index));
                 }
                 else if (globalScope.isVariableVisible(name))
                 {
                     int index = globalScope.variableIndex(name);
-                    instructions ~= GsInstruction(GsInstructionType.GLOBAL_LOAD_VAR, Variant(cast(double)index));
+                    instructions ~= GsInstruction(GsInstructionType.GLOBAL_LOAD_VAR, GsDynamic(cast(double)index));
                 }
                 else
                 {
@@ -193,7 +194,7 @@ class GsCodeGenerator
                 if (lhs.type == NodeType.MemberPropertyAccessExpression)
                 {
                     instructions ~= generate(lhs.children[0]); // object
-                    instructions ~= GsInstruction(GsInstructionType.SET, Variant(name));
+                    instructions ~= GsInstruction(GsInstructionType.SET, GsDynamic(name));
                 }
                 else if (lhs.type == NodeType.IndexAccessExpression)
                 {
@@ -209,12 +210,12 @@ class GsCodeGenerator
                     
                     v.isInitialized = true;
                     int index = v.index;
-                    instructions ~= GsInstruction(GsInstructionType.STORE_VAR, Variant(cast(double)index));
+                    instructions ~= GsInstruction(GsInstructionType.STORE_VAR, GsDynamic(cast(double)index));
                 }
                 else if (node.programScope.isArgumentVisible(name))
                 {
                     int index = node.programScope.argumentIndex(name);
-                    instructions ~= GsInstruction(GsInstructionType.STORE_ARG, Variant(cast(double)index));
+                    instructions ~= GsInstruction(GsInstructionType.STORE_ARG, GsDynamic(cast(double)index));
                 }
                 else if (globalScope.isVariableVisible(name))
                 {
@@ -224,7 +225,7 @@ class GsCodeGenerator
                     
                     v.isInitialized = true;
                     int index = v.index;
-                    instructions ~= GsInstruction(GsInstructionType.GLOBAL_STORE_VAR, Variant(cast(double)index));
+                    instructions ~= GsInstruction(GsInstructionType.GLOBAL_STORE_VAR, GsDynamic(cast(double)index));
                 }
                 else
                 {
@@ -239,20 +240,20 @@ class GsCodeGenerator
                     // Short-circuit for logical AND
                     string label = getLabel();
                     instructions ~= generate(node.children[0]);
-                    instructions ~= GsInstruction(GsInstructionType.JMP_IF_NOT, Variant(label));
+                    instructions ~= GsInstruction(GsInstructionType.JMP_IF_NOT, GsDynamic(label));
                     instructions ~= generate(node.children[1]);
                     instructions ~= GsInstruction(GsInstructionType.AND);
-                    instructions ~= GsInstruction(GsInstructionType.LABEL, Variant(label));
+                    instructions ~= GsInstruction(GsInstructionType.LABEL, GsDynamic(label));
                 }
                 else if (op == "||")
                 {
                     // Short-circuit for logical OR
                     string label = getLabel();
                     instructions ~= generate(node.children[0]);
-                    instructions ~= GsInstruction(GsInstructionType.JMP_IF, Variant(label));
+                    instructions ~= GsInstruction(GsInstructionType.JMP_IF, GsDynamic(label));
                     instructions ~= generate(node.children[1]);
                     instructions ~= GsInstruction(GsInstructionType.OR);
-                    instructions ~= GsInstruction(GsInstructionType.LABEL, Variant(label));
+                    instructions ~= GsInstruction(GsInstructionType.LABEL, GsDynamic(label));
                 }
                 else
                 {
@@ -290,26 +291,26 @@ class GsCodeGenerator
                 {
                     // Call by reference
                     int index = node.programScope.variableIndex(funcName);
-                    instructions ~= GsInstruction(GsInstructionType.LOAD_VAR, Variant(cast(double)index));
+                    instructions ~= GsInstruction(GsInstructionType.LOAD_VAR, GsDynamic(cast(double)index));
                 }
                 else if (node.programScope.isArgumentVisible(funcName))
                 {
                     // Call by reference
                     int index = node.programScope.argumentIndex(funcName);
-                    instructions ~= GsInstruction(GsInstructionType.LOAD_ARG, Variant(cast(double)index));
+                    instructions ~= GsInstruction(GsInstructionType.LOAD_ARG, GsDynamic(cast(double)index));
                 }
                 else if (globalScope.isVariableVisible(funcName))
                 {
                     // Call by global reference
                     int index = globalScope.variableIndex(funcName);
-                    instructions ~= GsInstruction(GsInstructionType.GLOBAL_LOAD_VAR, Variant(cast(double)index));
+                    instructions ~= GsInstruction(GsInstructionType.GLOBAL_LOAD_VAR, GsDynamic(cast(double)index));
                 }
                 else
                 {
                     // Call funcName directly
-                    instructions ~= GsInstruction(GsInstructionType.PUSH, Variant(funcName));
+                    instructions ~= GsInstruction(GsInstructionType.PUSH, GsDynamic(funcName));
                 }
-                instructions ~= GsInstruction(GsInstructionType.CALL, Variant(cast(double)numParameters));
+                instructions ~= GsInstruction(GsInstructionType.CALL, GsDynamic(cast(double)numParameters));
                 break;
             
             case NodeType.LetStatement:
@@ -352,7 +353,7 @@ class GsCodeGenerator
                 instructions ~= generate(node.children[0]); // left expression
                 instructions ~= generate(node.children[1]); // index expression
                 instructions ~= GsInstruction(GsInstructionType.INDEX_GET);
-                instructions ~= GsInstruction(GsInstructionType.CALL, Variant(cast(double)numParameters));
+                instructions ~= GsInstruction(GsInstructionType.CALL, GsDynamic(cast(double)numParameters));
                 break;
             
             case NodeType.MemberPropertyAccessExpression:
@@ -360,7 +361,7 @@ class GsCodeGenerator
                 if (node.value == "length")
                     instructions ~= GsInstruction(GsInstructionType.LENGTH);
                 else
-                    instructions ~= GsInstruction(GsInstructionType.GET, Variant(node.value));
+                    instructions ~= GsInstruction(GsInstructionType.GET, GsDynamic(node.value));
                 break;
             
             case NodeType.MemberCallExpression:
@@ -372,16 +373,16 @@ class GsCodeGenerator
                 if (builtins.canFind(node.value))
                 {
                     // Use builtin
-                    instructions ~= GsInstruction(GsInstructionType.PUSH, Variant(node.value));
+                    instructions ~= GsInstruction(GsInstructionType.PUSH, GsDynamic(node.value));
                 }
                 else
                 {
                     // Use member function
                     instructions ~= generate(node.children[0]); // identifier expression
-                    instructions ~= GsInstruction(GsInstructionType.GET, Variant(node.value));
+                    instructions ~= GsInstruction(GsInstructionType.GET, GsDynamic(node.value));
                 }
                 
-                instructions ~= GsInstruction(GsInstructionType.CALL, Variant(cast(double)numParameters));
+                instructions ~= GsInstruction(GsInstructionType.CALL, GsDynamic(cast(double)numParameters));
                 break;
             
             case NodeType.NewExpression:
@@ -390,7 +391,7 @@ class GsCodeGenerator
                 break;
             
             case NodeType.ArgumentExpression:
-                instructions ~= GsInstruction(GsInstructionType.LOAD_ARG, Variant(node.value.to!double));
+                instructions ~= GsInstruction(GsInstructionType.LOAD_ARG, GsDynamic(node.value.to!double));
                 break;
             
             case NodeType.ArgumentsArrayExpression:
@@ -400,52 +401,52 @@ class GsCodeGenerator
             case NodeType.IfStatement:
                 string labelEndIf = getLabel();
                 instructions ~= generate(node.children[0]); // condition
-                instructions ~= GsInstruction(GsInstructionType.JMP_IF_NOT, Variant(labelEndIf));
+                instructions ~= GsInstruction(GsInstructionType.JMP_IF_NOT, GsDynamic(labelEndIf));
                 instructions ~= generate(node.children[1]); // if-block
                 if (node.children.length > 2)
                 {
                     string labelEndElse = getLabel();
-                    instructions ~= GsInstruction(GsInstructionType.JMP, Variant(labelEndElse));
-                    instructions ~= GsInstruction(GsInstructionType.LABEL, Variant(labelEndIf));
+                    instructions ~= GsInstruction(GsInstructionType.JMP, GsDynamic(labelEndElse));
+                    instructions ~= GsInstruction(GsInstructionType.LABEL, GsDynamic(labelEndIf));
                     instructions ~= generate(node.children[2]); // else-block
-                    instructions ~= GsInstruction(GsInstructionType.LABEL, Variant(labelEndElse));
+                    instructions ~= GsInstruction(GsInstructionType.LABEL, GsDynamic(labelEndElse));
                 }
                 else
                 {
-                    instructions ~= GsInstruction(GsInstructionType.LABEL, Variant(labelEndIf));
+                    instructions ~= GsInstruction(GsInstructionType.LABEL, GsDynamic(labelEndIf));
                 }
                 break;
             
             case NodeType.WhileStatement:
                 string labelStartWhile = getLabel();
                 string labelEndWhile = getLabel();
-                instructions ~= GsInstruction(GsInstructionType.LABEL, Variant(labelStartWhile));
+                instructions ~= GsInstruction(GsInstructionType.LABEL, GsDynamic(labelStartWhile));
                 instructions ~= generate(node.children[0]); // condition
-                instructions ~= GsInstruction(GsInstructionType.JMP_IF_NOT, Variant(labelEndWhile));
+                instructions ~= GsInstruction(GsInstructionType.JMP_IF_NOT, GsDynamic(labelEndWhile));
                 instructions ~= generate(node.children[1]); // loop
-                instructions ~= GsInstruction(GsInstructionType.JMP, Variant(labelStartWhile));
-                instructions ~= GsInstruction(GsInstructionType.LABEL, Variant(labelEndWhile));
+                instructions ~= GsInstruction(GsInstructionType.JMP, GsDynamic(labelStartWhile));
+                instructions ~= GsInstruction(GsInstructionType.LABEL, GsDynamic(labelEndWhile));
                 break;
             
             case NodeType.DoWhileStatement:
                 string labelStartWhile = getLabel();
-                instructions ~= GsInstruction(GsInstructionType.LABEL, Variant(labelStartWhile));
+                instructions ~= GsInstruction(GsInstructionType.LABEL, GsDynamic(labelStartWhile));
                 instructions ~= generate(node.children[1]); // loop
                 instructions ~= generate(node.children[0]); // condition
-                instructions ~= GsInstruction(GsInstructionType.JMP_IF, Variant(labelStartWhile));
+                instructions ~= GsInstruction(GsInstructionType.JMP_IF, GsDynamic(labelStartWhile));
                 break;
             
             case NodeType.ForStatement:
                 string labelStartFor = getLabel();
                 string labelEndFor = getLabel();
                 instructions ~= generate(node.children[0]); // initialization
-                instructions ~= GsInstruction(GsInstructionType.LABEL, Variant(labelStartFor));
+                instructions ~= GsInstruction(GsInstructionType.LABEL, GsDynamic(labelStartFor));
                 instructions ~= generate(node.children[1]); // condition
-                instructions ~= GsInstruction(GsInstructionType.JMP_IF_NOT, Variant(labelEndFor));
+                instructions ~= GsInstruction(GsInstructionType.JMP_IF_NOT, GsDynamic(labelEndFor));
                 instructions ~= generate(node.children[2]); // loop
                 instructions ~= generate(node.children[3]); // advancement
-                instructions ~= GsInstruction(GsInstructionType.JMP, Variant(labelStartFor));
-                instructions ~= GsInstruction(GsInstructionType.LABEL, Variant(labelEndFor));
+                instructions ~= GsInstruction(GsInstructionType.JMP, GsDynamic(labelStartFor));
+                instructions ~= GsInstruction(GsInstructionType.LABEL, GsDynamic(labelEndFor));
                 break;
             
             case NodeType.Function:
@@ -491,8 +492,8 @@ class GsCodeGenerator
                     try
                     {
                         globalScope.defineVariable(func.name, true);
-                        output ~= GsInstruction(GsInstructionType.PUSH, Variant(func.name));
-                        output ~= GsInstruction(GsInstructionType.STORE_VAR, Variant(cast(double)numFunctions));
+                        output ~= GsInstruction(GsInstructionType.PUSH, GsDynamic(func.name));
+                        output ~= GsInstruction(GsInstructionType.STORE_VAR, GsDynamic(cast(double)numFunctions));
                         numFunctions++;
                     }
                     catch(Exception e)
@@ -538,7 +539,7 @@ class GsCodeGenerator
                 {
                     auto func = cast(ASTFunction)node;
                     // TODO: qualified name
-                    output ~= GsInstruction(GsInstructionType.LABEL, Variant(func.name));
+                    output ~= GsInstruction(GsInstructionType.LABEL, GsDynamic(func.name));
                     
                     // Function body
                     try
@@ -552,7 +553,7 @@ class GsCodeGenerator
                     }
                     
                     // Default return 0
-                    output ~= GsInstruction(GsInstructionType.PUSH, Variant(cast(double)0.0));
+                    output ~= GsInstruction(GsInstructionType.PUSH, GsDynamic(cast(double)0.0));
                     output ~= GsInstruction(GsInstructionType.RET);
                 }
             }

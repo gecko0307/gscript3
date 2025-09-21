@@ -29,7 +29,6 @@ module main;
 
 import std.stdio;
 import std.conv;
-import std.variant;
 import std.file;
 import std.path;
 import gscript.instruction_set;
@@ -37,6 +36,7 @@ import gscript.vm;
 import gscript.assembler;
 import gscript.serializer;
 import gscript.compiler;
+import gscript.dynamic;
 
 class TestObj: GsObject
 {
@@ -52,20 +52,20 @@ class TestObj: GsObject
         writeln("TestObj.foo called");
     }
     
-    Variant get(string key)
+    GsDynamic get(string key)
     {
         if (key == "x")
-            return Variant(cast(double)x);
+            return GsDynamic(cast(double)x);
         else if (key == "foo")
-            return Variant(&foo);
+            return GsDynamic(&foo);
         else
-            return Variant(cast(double)0.0);
+            return GsDynamic(cast(double)0.0);
     }
     
-    void set(string key, Variant value)
+    void set(string key, GsDynamic value)
     {
         if (key == "x")
-            x = cast(int)value.get!double;
+            x = cast(int)value.asNumber;
     }
     
     bool contains(string key)
@@ -83,12 +83,12 @@ class TestObj: GsObject
     }
 }
 
-Variant printSum(Variant[] args)
+GsDynamic printSum(GsDynamic[] args)
 {
-    auto b = args[0]; // Get the second argument
-    auto a = args[1]; // Get the first argument
+    auto b = args[0].asNumber; // Get the second argument
+    auto a = args[1].asNumber; // Get the first argument
     writeln("printSum: ", a + b);
-    return Variant(0);
+    return GsDynamic(0);
 }
 
 void main(string[] args)
@@ -131,13 +131,13 @@ void main(string[] args)
     writeln(instructions);
     
     TestObj test = new TestObj();
-    Variant[] arr = [Variant(0.0), Variant(40.0), Variant("Hello, World!"), Variant(&printSum)];
+    GsDynamic[] arr = [GsDynamic(0.0), GsDynamic(40.0), GsDynamic("Hello, World!"), GsDynamic(&printSum)];
 
     auto vm = new GsVirtualMachine();
-    vm.set("foo", Variant(100));
-    vm.set("printSum", Variant(&printSum));
-    vm.set("test", Variant(test));
-    vm.set("arr", Variant(arr));
+    vm.set("foo", GsDynamic(100));
+    vm.set("printSum", GsDynamic(&printSum));
+    vm.set("test", GsDynamic(test));
+    vm.set("arr", GsDynamic(arr));
     vm.load(instructions);
     vm.run();
     

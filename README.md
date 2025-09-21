@@ -62,21 +62,21 @@ GScript3 implements prototype-based OOP. Objects are created from other objects 
 Example:
 
 ```
-const obj = {
-    foo: "bar",
+const Obj = {
+    prop: "bar",
     test: func(self)
     {
-        print self.foo;
+        print self.prop;
     }
 };
 
-const f = new obj;
+const f = new Obj;
 
-obj.prop = 10; // property is changed in the prototype
-obj.test();      // prints 10 (inherited from prototype)
+Obj.prop = 10;   // property is changed in the prototype
+f.test();        // prints 10 (inherited from prototype)
 
-obj.prop = 5;
-obj.test();      // prints 5 (now overrides prototype property)
+f.prop = 5;
+f.test();        // prints 5 (now overrides prototype property)
 ```
 
 ## Modules

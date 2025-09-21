@@ -29,12 +29,11 @@ module gscript.vm;
 
 import std.stdio;
 import std.conv;
-import std.variant;
 import std.traits;
 import std.algorithm;
+
 import gscript.instruction_set;
-import dlib.core.memory;
-import dlib.container.dict;
+import gscript.dynamic;
 
 class LabelMap
 {
@@ -148,8 +147,8 @@ class LabelMap
 
 interface GsObject
 {
-    Variant get(string key);
-    void set(string key, Variant value);
+    GsDynamic get(string key);
+    void set(string key, GsDynamic value);
     bool contains(string key);
     GsObject dup();
 }
@@ -158,7 +157,7 @@ class GsGCObject: GsObject
 {
     protected:
     
-    Variant[string] storage;
+    GsDynamic[string] storage;
     
     public:
     
@@ -166,7 +165,7 @@ class GsGCObject: GsObject
     {
     }
 
-    Variant get(string key)
+    GsDynamic get(string key)
     {
         auto v = key in storage;
         if (v)
@@ -176,17 +175,17 @@ class GsGCObject: GsObject
             auto proto = "__proto__" in storage;
             if (proto)
             {
-                if (auto protoObj = proto.peek!GsObject)
-                    return protoObj.get(key);
+                if (proto.type == GsDynamicType.Object)
+                    return proto.asObject.get(key);
                 else
-                    return Variant(null);
+                    return GsDynamic();
             }
             else
-                return Variant(null);
+                return GsDynamic();
         }
     }
 
-    void set(string key, Variant value)
+    void set(string key, GsDynamic value)
     {
         storage[key] = value;
     }
@@ -200,8 +199,8 @@ class GsGCObject: GsObject
             auto proto = "__proto__" in storage;
             if (proto)
             {
-                if (auto protoObj = proto.peek!GsObject)
-                    return protoObj.contains(key);
+                if (proto.type == GsDynamicType.Object)
+                    return proto.asObject.contains(key);
                 else
                     return false;
             }
@@ -221,30 +220,31 @@ class GsGCObject: GsObject
     }
 }
 
-alias GsNativeMethod = Variant delegate(Variant[]);
-alias GsNativeFunc = Variant function(Variant[]);
+alias GsNativeMethod = GsDynamic delegate(GsDynamic[]);
+alias GsNativeFunc = GsDynamic function(GsDynamic[]);
 
 struct GsCallFrame
 {
-    Variant[128] parameters;
-    Variant[128] localVariables;
+    GsDynamic[128] parameters;
+    GsDynamic[128] localVariables;
     size_t numParameters;
 }
 
-Variant vmBuiltinRemove(Variant[] args)
+GsDynamic vmBuiltinRemove(GsDynamic[] args)
 {
     if (args.length < 2)
         return args[0];
     
-    if (args[0].peek!(Variant[]) is null)
+    //if (args[0].peek!(GsDynamic[]) is null)
+    if (args[0].type != GsDynamicType.Array)
         return args[0];
     
-    auto arr = args[0].get!(Variant[]);
+    auto arr = args[0].asArray; //args[0].get!(GsDynamic[]);
     if (arr.length == 0)
-        return Variant(arr);
+        return GsDynamic(arr);
     
-    auto removeIndex = cast(size_t)args[1].get!(double);
-    auto newArr = new Variant[arr.length - 1];
+    auto removeIndex = cast(size_t)args[1].asNumber; //args[1].get!(double);
+    auto newArr = new GsDynamic[arr.length - 1];
     for (size_t i = 0; i < arr.length; i++)
     {
         if (i < removeIndex)
@@ -252,59 +252,62 @@ Variant vmBuiltinRemove(Variant[] args)
         else if (i > removeIndex)
             newArr[i - 1] = arr[i];
     }
-    return Variant(newArr);
+    return GsDynamic(newArr);
 }
 
-Variant vmBuiltinRemoveFront(Variant[] args)
+GsDynamic vmBuiltinRemoveFront(GsDynamic[] args)
 {
-    if (args[0].peek!(Variant[]) is null)
+    //if (args[0].peek!(GsDynamic[]) is null)
+    if (args[0].type != GsDynamicType.Array)
         return args[0];
     
-    auto arr = args[0].get!(Variant[]);
+    auto arr = args[0].asArray; //args[0].get!(GsDynamic[]);
     if (arr.length == 0)
-        return Variant(arr);
+        return GsDynamic(arr);
     
-    auto newArr = new Variant[arr.length - 1];
+    auto newArr = new GsDynamic[arr.length - 1];
     for (size_t i = 1; i < arr.length; i++)
     {
         newArr[i - 1] = arr[i];
     }
-    return Variant(newArr);
+    return GsDynamic(newArr);
 }
 
-Variant vmBuiltinRemoveBack(Variant[] args)
+GsDynamic vmBuiltinRemoveBack(GsDynamic[] args)
 {
-    if (args[0].peek!(Variant[]) is null)
+    //if (args[0].peek!(GsDynamic[]) is null)
+    if (args[0].type != GsDynamicType.Array)
         return args[0];
     
-    auto arr = args[0].get!(Variant[]);
+    auto arr = args[0].asArray; //args[0].get!(GsDynamic[]);
     if (arr.length == 0)
-        return Variant(arr);
+        return GsDynamic(arr);
     
-    auto newArr = new Variant[arr.length - 1];
+    auto newArr = new GsDynamic[arr.length - 1];
     for (size_t i = 0; i < newArr.length; i++)
     {
         newArr[i] = arr[i];
     }
-    return Variant(newArr);
+    return GsDynamic(newArr);
 }
 
-Variant vmBuiltinInsert(Variant[] args)
+GsDynamic vmBuiltinInsert(GsDynamic[] args)
 {
     if (args.length < 3)
         return args[0];
     
-    if (args[0].peek!(Variant[]) is null)
+    //if (args[0].peek!(GsDynamic[]) is null)
+    if (args[0].type != GsDynamicType.Array)
         return args[0];
     
-    auto arr = args[0].get!(Variant[]);
-    auto insertIndex = cast(size_t)args[1].get!(double);
+    auto arr = args[0].asArray; //args[0].get!(GsDynamic[]);
+    auto insertIndex = cast(size_t)args[1].asNumber; //cast(size_t)args[1].get!(double);
     if (insertIndex < 0)
         return args[0];
     
     auto value = args[2];
     
-    auto newArr = new Variant[arr.length + 1];
+    auto newArr = new GsDynamic[arr.length + 1];
     for (size_t i = 0; i < newArr.length; i++)
     {
         if (i < insertIndex)
@@ -314,13 +317,13 @@ Variant vmBuiltinInsert(Variant[] args)
         else
             newArr[i] = arr[i - 1];
     }
-    return Variant(newArr);
+    return GsDynamic(newArr);
 }
 
 class GsVirtualMachine: GsObject
 {
   protected:
-    Variant[] stack;
+    GsDynamic[] stack;
     GsInstruction[] instructions;
     size_t[] callStack;            // Call stack for subroutine return addresses
     GsCallFrame[] callFrames;      // Stack of call frames
@@ -329,13 +332,13 @@ class GsVirtualMachine: GsObject
     size_t cp;                     // Call stack pointer
 
     LabelMap jumpTable;            // Function table mapping names to instruction indices
-    Variant[string] globals;       // Built-in variables
+    GsDynamic[string] globals;       // Built-in variables
     
   public:
 
     this()
     {
-        this.stack = new Variant[256];          // Fixed stack size
+        this.stack = new GsDynamic[256];          // Fixed stack size
         this.callStack = new size_t[256];       // Fixed call stack size
         this.callFrames = new GsCallFrame[256]; // Initialize empty call stack
         this.ip = 0;
@@ -344,22 +347,22 @@ class GsVirtualMachine: GsObject
         
         jumpTable = new LabelMap(1000000);
         
-        set("remove", Variant(&vmBuiltinRemove));
-        set("removeFront", Variant(&vmBuiltinRemoveFront));
-        set("removeBack", Variant(&vmBuiltinRemoveBack));
-        set("insert", Variant(&vmBuiltinInsert));
+        set("remove", GsDynamic(&vmBuiltinRemove));
+        set("removeFront", GsDynamic(&vmBuiltinRemoveFront));
+        set("removeBack", GsDynamic(&vmBuiltinRemoveBack));
+        set("insert", GsDynamic(&vmBuiltinInsert));
     }
     
-    Variant get(string key)
+    GsDynamic get(string key)
     {
         auto v = key in globals;
         if (v)
             return *v;
         else
-            return Variant(cast(double)0.0);
+            return GsDynamic(cast(double)0.0);
     }
 
-    void set(string key, Variant value)
+    void set(string key, GsDynamic value)
     {
         globals[key] = value;
     }
@@ -380,7 +383,7 @@ class GsVirtualMachine: GsObject
     }
 
     // Stack manipulation methods
-    Variant pop()
+    GsDynamic pop()
     {
         if (sp == 0)
         {
@@ -389,7 +392,7 @@ class GsVirtualMachine: GsObject
         return stack[--sp];
     }
 
-    Variant peek()
+    GsDynamic peek()
     {
         if (sp == 0)
         {
@@ -398,7 +401,7 @@ class GsVirtualMachine: GsObject
         return stack[sp - 1];
     }
 
-    void push(Variant value)
+    void push(GsDynamic value)
     {
         if (sp >= stack.length)
         {
@@ -412,9 +415,9 @@ class GsVirtualMachine: GsObject
         return new GsGCObject();
     }
     
-    Variant[] createArray(size_t len)
+    GsDynamic[] createArray(size_t len)
     {
-        return new Variant[len];
+        return new GsDynamic[len];
     }
     
     bool hasLabel(string name)
@@ -434,7 +437,7 @@ class GsVirtualMachine: GsObject
         {
             if (instrunction.type == GsInstructionType.LABEL)
             {
-                jumpTable[instrunction.operand.get!string] = i;
+                jumpTable[instrunction.operand.asString] = i;
             }
         }
         
@@ -470,8 +473,8 @@ class GsVirtualMachine: GsObject
                 case GsInstructionType.ADD:
                     auto b = pop();
                     auto a = pop();
-                    if (a.convertsTo!(double) && b.convertsTo!(double))
-                        push(Variant(a.get!double + b.get!double));
+                    if (a.type == GsDynamicType.Number && b.type == GsDynamicType.Number)
+                        push(GsDynamic(a.asNumber + b.asNumber));
                     else
                     {
                         writefln("Fatality: addition of %s and %s", a.type, b.type);
@@ -482,8 +485,8 @@ class GsVirtualMachine: GsObject
                 case GsInstructionType.SUB:
                     auto b = pop();
                     auto a = pop();
-                    if (a.convertsTo!(double) && b.convertsTo!(double))
-                        push(Variant(a.get!double - b.get!double));
+                    if (a.type == GsDynamicType.Number && b.type == GsDynamicType.Number)
+                        push(GsDynamic(a.asNumber - b.asNumber));
                     else
                     {
                         writefln("Fatality: subtraction of %s and %s", a.type, b.type);
@@ -494,8 +497,8 @@ class GsVirtualMachine: GsObject
                 case GsInstructionType.MUL:
                     auto b = pop();
                     auto a = pop();
-                    if (a.convertsTo!(double) && b.convertsTo!(double))
-                        push(Variant(a.get!double * b.get!double));
+                    if (a.type == GsDynamicType.Number && b.type == GsDynamicType.Number)
+                        push(GsDynamic(a.asNumber * b.asNumber));
                     else
                     {
                         writefln("Fatality: multiplication of %s and %s", a.type, b.type);
@@ -506,8 +509,8 @@ class GsVirtualMachine: GsObject
                 case GsInstructionType.DIV:
                     auto b = pop();
                     auto a = pop();
-                    if (a.convertsTo!(double) && b.convertsTo!(double))
-                        push(Variant(a.get!double / b.get!double));
+                    if (a.type == GsDynamicType.Number && b.type == GsDynamicType.Number)
+                        push(GsDynamic(a.asNumber / b.asNumber));
                     else
                     {
                         writefln("Fatality: division of %s and %s", a.type, b.type);
@@ -517,8 +520,8 @@ class GsVirtualMachine: GsObject
                     break;
                 case GsInstructionType.NEG:
                     auto a = pop();
-                    if (a.convertsTo!(double))
-                        push(Variant(-a.get!double));
+                    if (a.type == GsDynamicType.Number)
+                        push(GsDynamic(-a.asNumber));
                     else
                     {
                         writefln("Fatality: negation of %s", a.type);
@@ -529,8 +532,8 @@ class GsVirtualMachine: GsObject
                 case GsInstructionType.MOD:
                     auto b = pop();
                     auto a = pop();
-                    if (a.convertsTo!(double) && b.convertsTo!(double))
-                        push(Variant(a.get!double % b.get!double));
+                    if (a.type == GsDynamicType.Number && b.type == GsDynamicType.Number)
+                        push(GsDynamic(a.asNumber % b.asNumber));
                     else
                     {
                         writefln("Fatality: modulo of %s and %s", a.type, b.type);
@@ -541,8 +544,8 @@ class GsVirtualMachine: GsObject
                 case GsInstructionType.POW:
                     auto b = pop();
                     auto a = pop();
-                    if (a.convertsTo!(double) && b.convertsTo!(double))
-                        push(Variant(a.get!double ^^ b.get!double));
+                    if (a.type == GsDynamicType.Number && b.type == GsDynamicType.Number)
+                        push(GsDynamic(a.asNumber ^^ b.asNumber));
                     else
                     {
                         writefln("Fatality: power of %s and %s", a.type, b.type);
@@ -553,8 +556,8 @@ class GsVirtualMachine: GsObject
                 case GsInstructionType.BITWISE_AND:
                     auto b = pop();
                     auto a = pop();
-                    if (a.convertsTo!(double) && b.convertsTo!(double))
-                        push(Variant(cast(long)(a.get!double) & cast(long)(b.get!double)));
+                    if (a.type == GsDynamicType.Number && b.type == GsDynamicType.Number)
+                        push(GsDynamic(cast(long)a.asNumber & cast(long)b.asNumber));
                     else
                     {
                         writefln("Fatality: bitwise AND of %s and %s", a.type, b.type);
@@ -565,8 +568,8 @@ class GsVirtualMachine: GsObject
                 case GsInstructionType.BITWISE_OR:
                     auto b = pop();
                     auto a = pop();
-                    if (a.convertsTo!(double) && b.convertsTo!(double))
-                        push(Variant(cast(long)(a.get!double) | cast(long)(b.get!double)));
+                    if (a.type == GsDynamicType.Number && b.type == GsDynamicType.Number)
+                        push(GsDynamic(cast(long)a.asNumber | cast(long)b.asNumber));
                     else
                     {
                         writefln("Fatality: bitwise OR of %s and %s", a.type, b.type);
@@ -577,8 +580,8 @@ class GsVirtualMachine: GsObject
                 case GsInstructionType.BITWISE_XOR:
                     auto b = pop();
                     auto a = pop();
-                    if (a.convertsTo!(double) && b.convertsTo!(double))
-                        push(Variant(cast(long)(a.get!double) ^ cast(long)(b.get!double)));
+                    if (a.type == GsDynamicType.Number && b.type == GsDynamicType.Number)
+                        push(GsDynamic(cast(long)a.asNumber ^ cast(long)b.asNumber));
                     else
                     {
                         writefln("Fatality: bitwise XOR of %s and %s", a.type, b.type);
@@ -589,8 +592,8 @@ class GsVirtualMachine: GsObject
                 case GsInstructionType.AND:
                     auto b = pop();
                     auto a = pop();
-                    if (a.convertsTo!(double) && b.convertsTo!(double))
-                        push(Variant(a.get!double && b.get!double));
+                    if (a.type == GsDynamicType.Number && b.type == GsDynamicType.Number)
+                        push(GsDynamic(a.asNumber && b.asNumber));
                     else
                     {
                         writefln("Fatality: logical AND of %s and %s", a.type, b.type);
@@ -601,8 +604,8 @@ class GsVirtualMachine: GsObject
                 case GsInstructionType.OR:
                     auto b = pop();
                     auto a = pop();
-                    if (a.convertsTo!(double) && b.convertsTo!(double))
-                        push(Variant(a.get!double || b.get!double));
+                    if (a.type == GsDynamicType.Number && b.type == GsDynamicType.Number)
+                        push(GsDynamic(a.asNumber || b.asNumber));
                     else
                     {
                         writefln("Fatality: logical OR of %s and %s", a.type, b.type);
@@ -612,8 +615,8 @@ class GsVirtualMachine: GsObject
                     break;
                 case GsInstructionType.NOT:
                     auto a = pop();
-                    if (a.convertsTo!(double))
-                        push(Variant(!a.get!double));
+                    if (a.type == GsDynamicType.Number)
+                        push(GsDynamic(!a.asNumber));
                     else
                     {
                         writefln("Fatality: logical NOT of %s", a.type);
@@ -624,69 +627,63 @@ class GsVirtualMachine: GsObject
                 case GsInstructionType.CAT:
                     auto b = pop();
                     auto a = pop();
-                    if (a.type is typeid(string))
+                    if (a.type == GsDynamicType.Array)
                     {
-                        push(Variant(a.toString() ~ b.toString()));
-                    }
-                    else if (a.peek!(Variant[]) !is null)
-                    {
-                        auto arr = a.get!(Variant[]);
-                        push(Variant(arr ~ b));
+                        auto arr = a.asArray;
+                        push(GsDynamic(arr ~ b));
                     }
                     else
                     {
-                        writefln("Fatality: illegal concatenation of %s and %s", a.type, b.type);
-                        finalize();
-                        return;
+                        push(GsDynamic(a.toString() ~ b.toString()));
                     }
                     break;
                 case GsInstructionType.EQ:
                     auto b = pop();
                     auto a = pop();
-                    push(Variant(a == b));
+                    push(GsDynamic(a == b));
                     break;
                 case GsInstructionType.LESS:
-                    auto b = pop().get!double;
-                    auto a = pop().get!double;
-                    push(Variant(a < b));
+                    auto b = pop().asNumber;
+                    auto a = pop().asNumber;
+                    push(GsDynamic(a < b));
                     break;
                 case GsInstructionType.GREATER:
-                    auto b = pop().get!double;
-                    auto a = pop().get!double;
-                    push(Variant(a > b));
+                    auto b = pop().asNumber;
+                    auto a = pop().asNumber;
+                    push(GsDynamic(a > b));
                     break;
                 case GsInstructionType.NEQ:
                     auto b = pop();
                     auto a = pop();
-                    push(Variant(a != b));
+                    push(GsDynamic(a != b));
                     break;
                 case GsInstructionType.LESS_EQ:
-                    auto b = pop().get!double;
-                    auto a = pop().get!double;
-                    push(Variant(a <= b));
+                    auto b = pop().asNumber;
+                    auto a = pop().asNumber;
+                    push(GsDynamic(a <= b));
                     break;
                 case GsInstructionType.GREATER_EQ:
-                    auto b = pop().get!double;
-                    auto a = pop().get!double;
-                    push(Variant(a >= b));
+                    auto b = pop().asNumber;
+                    auto a = pop().asNumber;
+                    push(GsDynamic(a >= b));
                     break;
                 case GsInstructionType.JMP:
-                    ip = jumpTable[instruction.operand.get!string];
+                    ip = jumpTable[instruction.operand.asString];
                     break;
                 case GsInstructionType.JMP_IF:
-                    if (cast(bool)pop().get!double)
-                        ip = jumpTable[instruction.operand.get!string];
+                    if (cast(bool)pop().asNumber)
+                        ip = jumpTable[instruction.operand.asString];
                     break;
                 case GsInstructionType.JMP_IF_NOT:
-                    if (!cast(bool)pop().get!double)
-                        ip = jumpTable[instruction.operand.get!string];
+                    if (!cast(bool)pop().asNumber)
+                        ip = jumpTable[instruction.operand.asString];
                     break;
                 case GsInstructionType.INDEX_GET:
-                    size_t index = cast(size_t)pop().get!double;
+                    size_t index = cast(size_t)pop().asNumber;
                     auto arrayParam = pop();
-                    if (arrayParam.peek!(Variant[]) !is null)
+                    if (arrayParam.type == GsDynamicType.Array)
                     {
-                        auto array = arrayParam.get!(Variant[]);
+                        auto array = arrayParam.asArray;
                         if (index >= 0 && index < array.length)
                         {
                             push(array[index]);
@@ -706,11 +703,11 @@ class GsVirtualMachine: GsObject
                         return;
                     }
                 case GsInstructionType.INDEX_SET:
-                    size_t index = cast(size_t)pop().get!double;
+                    size_t index = cast(size_t)pop().asNumber;
                     auto arrayParam = pop();
-                    if (arrayParam.peek!(Variant[]) !is null)
+                    if (arrayParam.type == GsDynamicType.Array)
                     {
-                        auto array = arrayParam.get!(Variant[]);
+                        auto array = arrayParam.asArray;
                         auto value = pop();
                         if (index >= 0 && index < array.length)
                             array[index] = value;
@@ -731,28 +728,29 @@ class GsVirtualMachine: GsObject
                     }
                 case GsInstructionType.LENGTH:
                     auto array = pop();
-                    push(Variant(cast(double)array.length));
+                    push(GsDynamic(array.asArray.length));
                     break;
                 case GsInstructionType.PRINT:
                     writeln(pop());
                     break;
                 case GsInstructionType.GLOBAL:
-                    push(Variant(cast(GsObject)this));
+                    push(GsDynamic(this));
                     break;
                 case GsInstructionType.ARRAY:
-                    size_t len = cast(size_t)pop().get!double;
+                    size_t len = cast(size_t)pop().asNumber;
                     auto arr = createArray(len);
                     for (size_t i = 0; i < len; i++)
                     {
                         arr[$ - 1 - i] = pop();
                     }
-                    push(Variant(arr));
+                    push(GsDynamic(arr));
                     break;
                 case GsInstructionType.CALL:
-                    size_t numParams = cast(size_t)instruction.operand.get!double;
+                    size_t numParams = cast(size_t)instruction.operand.asNumber;
                     
                     auto func = pop();
                     
+                    /*
                     GsNativeMethod nativeMethod;
                     GsNativeFunc nativeFuncPtr;
                     bool useNativeMethod = false;
@@ -769,10 +767,11 @@ class GsVirtualMachine: GsObject
                         useNativeFunc = true;
                     }
                     else
+                    */
                     {
-                        if (func.type is typeid(string))
+                        if (func.type == GsDynamicType.String)
                         {
-                            string funcName = func.get!string;
+                            string funcName = func.asString;
                             if (funcName in jumpTable)
                             {
                                 callStack[cp] = ip; // Push the current instruction pointer onto the call stack
@@ -784,7 +783,7 @@ class GsVirtualMachine: GsObject
                                     if (i < numParams)
                                         callFrame.parameters[numParams - 1 - i] = pop();
                                     else
-                                        callFrame.parameters[i] = Variant.init;
+                                        callFrame.parameters[i] = GsDynamic();
                                 }
                                 callFrame.numParameters = numParams;
                                 
@@ -792,6 +791,7 @@ class GsVirtualMachine: GsObject
                                 
                                 break;
                             }
+                            /*
                             else if (funcName in globals)
                             {
                                 auto nativeFunc = globals[funcName];
@@ -813,6 +813,7 @@ class GsVirtualMachine: GsObject
                                     return;
                                 }
                             }
+                            */
                             else
                             {
                                 writefln("Fatality: undefined jump label \"%s\"", funcName);
@@ -828,6 +829,7 @@ class GsVirtualMachine: GsObject
                         }
                     }
                     
+                    /*
                     // Native call: push a new call frame
                     cp++;
                     callFrame = &callFrames[cp];
@@ -836,11 +838,11 @@ class GsVirtualMachine: GsObject
                         if (i < numParams)
                             callFrame.parameters[numParams - 1 - i] = pop();
                         else
-                            callFrame.parameters[i] = Variant.init;
+                            callFrame.parameters[i] = GsDynamic.init;
                     }
                     callFrame.numParameters = numParams;
                     
-                    Variant result;
+                    GsDynamic result;
                     if (useNativeMethod)
                         result = nativeMethod(callFrame.parameters[0..numParams]);
                     else if (useNativeFunc)
@@ -849,6 +851,8 @@ class GsVirtualMachine: GsObject
                     cp--;
                     callFrame = &callFrames[cp];
                     push(result);
+                    */
+                    
                     break;
                 case GsInstructionType.RET:
                     cp--;
@@ -856,44 +860,44 @@ class GsVirtualMachine: GsObject
                     callFrame = &callFrames[cp];
                     break;
                 case GsInstructionType.STORE_VAR:
-                    size_t vIndex = cast(size_t)instruction.operand.get!double;
+                    size_t vIndex = cast(size_t)instruction.operand.asNumber;
                     callFrames[cp].localVariables[vIndex] = peek(); // Store a value into a local variable
                     break;
                 case GsInstructionType.LOAD_VAR:
-                    size_t vIndex = cast(size_t)instruction.operand.get!double;
+                    size_t vIndex = cast(size_t)instruction.operand.asNumber;
                     push(callFrames[cp].localVariables[vIndex]); // Load a local variable onto the stack
                     break;
                 case GsInstructionType.STORE_ARG:
-                    size_t vIndex = cast(size_t)instruction.operand.get!double;
+                    size_t vIndex = cast(size_t)instruction.operand.asNumber;
                     callFrames[cp].parameters[vIndex] = peek(); // Store a stack value into a parameter
                     break;
                 case GsInstructionType.LOAD_ARG:
-                    size_t vIndex = cast(size_t)instruction.operand.get!double;
+                    size_t vIndex = cast(size_t)instruction.operand.asNumber;
                     push(callFrames[cp].parameters[vIndex]); // Load a parameter onto the stack
                     break;
                 case GsInstructionType.LOAD_ARGS:
                     auto frame = &callFrames[cp];
-                    push(Variant(frame.parameters[0..frame.numParameters])); // Load all parameters onto the stack
+                    push(GsDynamic(frame.parameters[0..frame.numParameters])); // Load all parameters onto the stack
                     break;
                 case GsInstructionType.GLOBAL_STORE_VAR:
-                    size_t vIndex = cast(size_t)instruction.operand.get!double;
+                    size_t vIndex = cast(size_t)instruction.operand.asNumber;
                     callFrames[0].localVariables[vIndex] = peek(); // Store a value into a global variable
                     break;
                 case GsInstructionType.GLOBAL_LOAD_VAR:
-                    size_t vIndex = cast(size_t)instruction.operand.get!double;
+                    size_t vIndex = cast(size_t)instruction.operand.asNumber;
                     push(callFrames[0].localVariables[vIndex]); // Load a global variable onto the stack
                     break;
                 case GsInstructionType.NEW:
                     auto obj = createObject();
-                    push(Variant(obj));
+                    push(GsDynamic(obj));
                     break;
                 case GsInstructionType.REUSE:
                     auto param = pop();
-                    if (auto obj = param.peek!(GsObject))
+                    if (param.type == GsDynamicType.Object)
                     {
                         auto newObj = createObject();
                         newObj.set("__proto__", param);
-                        push(Variant(newObj));
+                        push(GsDynamic(newObj));
                     }
                     else
                     {
@@ -903,11 +907,11 @@ class GsVirtualMachine: GsObject
                     }
                     break;
                 case GsInstructionType.GET:
-                    auto key = instruction.operand.get!string;
+                    auto key = instruction.operand.asString;
                     auto param = pop();
-                    if (auto obj = param.peek!(GsObject))
+                    if (param.type == GsDynamicType.Object)
                     {
-                        push(obj.get(key));
+                        push(param.asObject.get(key));
                     }
                     else
                     {
@@ -917,12 +921,12 @@ class GsVirtualMachine: GsObject
                     }
                     break;
                 case GsInstructionType.SET:
-                    auto key = instruction.operand.get!string;
+                    auto key = instruction.operand.asString;
                     auto param = pop();
                     auto value = pop();
-                    if (auto obj = param.peek!(GsObject))
+                    if (param.type == GsDynamicType.Object)
                     {
-                        obj.set(key, value);
+                        param.asObject.set(key, value);
                         push(value);
                         break;
                     }
@@ -933,12 +937,12 @@ class GsVirtualMachine: GsObject
                         return;
                     }
                 case GsInstructionType.INIT_SET:
-                    auto key = instruction.operand.get!string;
+                    auto key = instruction.operand.asString;
                     auto value = pop();
                     auto param = peek();
-                    if (auto obj = param.peek!(GsObject))
+                    if (param.type == GsDynamicType.Object)
                     {
-                        obj.set(key, value);
+                        param.asObject.set(key, value);
                         break;
                     }
                     else
@@ -948,11 +952,11 @@ class GsVirtualMachine: GsObject
                         return;
                     }
                 case GsInstructionType.CONTAINS:
-                    auto key = instruction.operand.get!string;
+                    auto key = instruction.operand.asString;
                     auto param = pop();
-                    if (auto obj = param.peek!(GsObject))
+                    if (param.type == GsDynamicType.Object)
                     {
-                        push(Variant(obj.contains(key)));
+                        push(GsDynamic(param.asObject.contains(key)));
                     }
                     else
                     {
