@@ -838,7 +838,7 @@ class GsParser
             ASTNode conditionExpr = parseExpression();
             
             ASTBlock ifBlock = new ASTBlock();
-            ifBlock.programScope = program.pushScope();
+            ifBlock.programScope = program.pushScope(true);
             parseImplicitBlock(ifBlock);
             program.popScope();
             
@@ -848,7 +848,7 @@ class GsParser
             {
                 eat(GsTokenType.Keyword); // "else"
                 ASTBlock elseBlock = new ASTBlock();
-                elseBlock.programScope = program.pushScope();
+                elseBlock.programScope = program.pushScope(true);
                 parseImplicitBlock(elseBlock);
                 program.popScope();
                 children = [conditionExpr, ifBlock, elseBlock];
