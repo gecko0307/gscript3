@@ -31,6 +31,7 @@ import std.stdio;
 import std.conv;
 import std.file;
 import std.path;
+import std.datetime: SysTime;
 
 import gscript.instruction_set;
 import gscript.vm;
@@ -103,7 +104,17 @@ void main(string[] args)
         return;
     
     string inputFilename = args[1];
+    
+    if (!exists(inputFilename))
+    {
+        writeln(inputFilename, " not found");
+        return;
+    }
+    
     string inputExtension = extension(inputFilename);
+    string inputDirectory = dirName(inputFilename);
+    string bytecodeFilename = baseName(inputFilename, inputExtension) ~ ".gsc";
+    string bytecodePath = buildPath(inputDirectory, bytecodeFilename);
     
     if (args.length >= 2)
     {
@@ -120,9 +131,23 @@ void main(string[] args)
         }
         else
         {
-            string script = readText(inputFilename);
-            instructions = compile(script, inputFilename);
-            saveCode = true;
+            bool needToCompile = true;
+            if (exists(bytecodePath))
+            {
+                if (timeLastModified(inputFilename, SysTime.min) < timeLastModified(bytecodePath, SysTime.min))
+                {
+                    ubyte[] code = cast(ubyte[])std.file.read(bytecodePath);
+                    instructions = loadBytecode(code);
+                    needToCompile = false;
+                }
+            }
+            
+            if (needToCompile)
+            {
+                string script = readText(inputFilename);
+                instructions = compile(script, inputFilename);
+                saveCode = true;
+            }
         }
     }
     else
@@ -131,7 +156,7 @@ void main(string[] args)
     if (instructions.length == 0)
         return;
 
-    writeln(instructions);
+    debug writeln(instructions);
     
     TestObj test = new TestObj();
     GsDynamic[] arr = [GsDynamic(0.0), GsDynamic(40.0), GsDynamic("Hello, World!"), GsDynamic(&printSum)];
@@ -147,7 +172,6 @@ void main(string[] args)
     if (saveCode)
     {
         ubyte[] code = saveBytecode(instructions);
-        string outputFilename = baseName(inputFilename, inputExtension) ~ ".gsc";
-        std.file.write(outputFilename, code);
+        std.file.write(bytecodePath, code);
     }
 }
