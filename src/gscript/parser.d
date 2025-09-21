@@ -51,6 +51,7 @@ enum NodeType
     ExpressionStatement,
     ReturnStatement,
     PrintStatement,
+    IfStatement,
     Block,
     FunctionCallExpression,
     IndexAccessExpression,
@@ -830,7 +831,38 @@ class GsParser
 
     ASTNode parseStatement()
     {
-        if (currentToken.value == "func")
+        if (currentToken.value == "if")
+        {
+            eat(GsTokenType.Keyword); // "if"
+            
+            ASTNode conditionExpr = parseExpression();
+            
+            ASTBlock ifBlock = new ASTBlock();
+            ifBlock.programScope = program.pushScope();
+            parseImplicitBlock(ifBlock);
+            program.popScope();
+            
+            ASTNode[] children;
+            
+            if (currentToken.value == "else")
+            {
+                eat(GsTokenType.Keyword); // "else"
+                ASTBlock elseBlock = new ASTBlock();
+                elseBlock.programScope = program.pushScope();
+                parseImplicitBlock(elseBlock);
+                program.popScope();
+                children = [conditionExpr, ifBlock, elseBlock];
+            }
+            else
+            {
+                children = [conditionExpr, ifBlock];
+            }
+            
+            ASTNode ifStatement = new ASTNode(NodeType.IfStatement, "", children);
+            ifStatement.programScope = program.peekScope();
+            return ifStatement;
+        }
+        else if (currentToken.value == "func")
         {
             if (program.isRootScope)
             {
@@ -897,8 +929,18 @@ class GsParser
         else if (currentToken.value == "import")
         {
             eat(GsTokenType.Keyword); // import
-            if (currentToken.type == GsTokenType.String)
+            if (currentToken.type == GsTokenType.Identifier)
             {
+                string importName = currentToken.value;
+                eat(GsTokenType.Identifier); // import name
+                
+                if (currentToken.value != "from")
+                {
+                    stop("\"from\" expected, not \"" ~ currentToken.value ~ "\"");
+                    return null;
+                }
+                eat(GsTokenType.Keyword); // from
+                
                 string importFilename = currentToken.value;
                 eat(GsTokenType.String); // filename
                 if (importFilename.length > 2)
@@ -909,15 +951,6 @@ class GsParser
                     return null;
                 }
                 
-                if (currentToken.value != "as")
-                {
-                    stop("\"as\" expected, not \"" ~ currentToken.value ~ "\"");
-                    return null;
-                }
-                eat(GsTokenType.Keyword); // as
-                
-                string importName = currentToken.value;
-                eat(GsTokenType.Identifier); // import name
                 eat(GsTokenType.Semicolon); // ";"
                 
                 // ConstStatement <importName>
@@ -1012,7 +1045,7 @@ class GsParser
         return running;
     }
 
-    void parseBlock(ASTBlock parentBlock)
+    void parseBlock(ASTBlock block)
     {
         eat(GsTokenType.OpeningCurlyBracket); // {
         while(running)
@@ -1023,10 +1056,25 @@ class GsParser
             if (statement)
             {
                 statement.programScope = program.peekScope();
-                parentBlock.children ~= statement;
+                block.children ~= statement;
             }
         }
         eat(GsTokenType.ClosingCurlyBracket); // }
+    }
+    
+    void parseImplicitBlock(ASTBlock block)
+    {
+        if (currentToken.type == GsTokenType.OpeningCurlyBracket)
+            parseBlock(block);
+        else
+        {
+            auto statement = parseStatement();
+            if (statement)
+            {
+                statement.programScope = program.peekScope();
+                block.children ~= statement;
+            }
+        }
     }
     
     void parseList(ASTNode parentNode)

@@ -57,7 +57,7 @@ Now you can import and use this module:
 
 main.gs:
 ```
-import "foo.gs" as Foo;
+import Foo from "foo.gs";
 
 Foo.test();
 ```
@@ -72,7 +72,7 @@ GScript3 uses a prototype-based OOP, similar to JavaScript. Objects are created 
 Example:
 
 ```
-import "foo.gs" as Foo;
+import Foo from "foo.gs";
 
 const f = new Foo;
 

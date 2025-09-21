@@ -389,6 +389,25 @@ class GsCodeGenerator
                 instructions ~= GsInstruction(GsInstructionType.REUSE);
                 break;
             
+            case NodeType.IfStatement:
+                string labelEndIf = getLabel();
+                instructions ~= generate(node.children[0]); // condition
+                instructions ~= GsInstruction(GsInstructionType.JMP_IF_NOT, Variant(labelEndIf));
+                instructions ~= generate(node.children[1]); // if-block
+                if (node.children.length > 2)
+                {
+                    string labelEndElse = getLabel();
+                    instructions ~= GsInstruction(GsInstructionType.JMP, Variant(labelEndElse));
+                    instructions ~= GsInstruction(GsInstructionType.LABEL, Variant(labelEndIf));
+                    instructions ~= generate(node.children[2]); // else-block
+                    instructions ~= GsInstruction(GsInstructionType.LABEL, Variant(labelEndElse));
+                }
+                else
+                {
+                    instructions ~= GsInstruction(GsInstructionType.LABEL, Variant(labelEndIf));
+                }
+                break;
+            
             case NodeType.Function:
                 // No-op
                 break;

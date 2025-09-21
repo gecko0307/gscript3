@@ -130,7 +130,7 @@ class GsLexer
         "let", "const", "new", "func",
         "return",
         "if", "else", "while",
-        "import", "as",
+        "import", "from",
         "print"
     ];
     

@@ -1,10 +1,8 @@
-import "foo.gs" as Foo;
+const x = 10;
 
-const f = new Foo;
-Foo.prop = 10;
-f.test();
-
-f.prop = 5;
-f.test();
-
-Foo.test();
+if x < 0
+    print "if-block";
+else if x == 10
+    print "else-if-block";
+else
+    print "else-block";
