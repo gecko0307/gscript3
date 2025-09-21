@@ -33,6 +33,118 @@ import std.variant;
 import std.traits;
 import std.algorithm;
 import gscript.instruction_set;
+import dlib.core.memory;
+import dlib.container.dict;
+
+class LabelMap
+{
+    private struct Entry
+    {
+        string key;
+        size_t value;
+        bool used;
+        bool filled;
+    }
+
+    private Entry[] table;
+    private size_t count;
+    private size_t mask;
+
+    this(size_t capacity)
+    {
+        size_t cap = 1;
+        while (cap < capacity * 2) cap <<= 1;
+        table = new Entry[cap];
+        mask = cap - 1;
+    }
+
+    private size_t hash(string s) const
+    {
+        ulong h = 1469598103934665603UL;
+        foreach (ubyte c; s) {
+            h ^= c;
+            h *= 1099511628211UL;
+        }
+        return cast(size_t)h;
+    }
+
+    void add(string key, size_t value)
+    {
+        if (count * 2 >= table.length) rehash();
+        insert(key, value);
+    }
+
+    private void insert(string key, size_t value)
+    {
+        size_t i = hash(key) & mask;
+        while (table[i].filled)
+        {
+            if (table[i].key == key)
+            {
+                table[i].value = value;
+                return;
+            }
+            i = (i + 1) & mask;
+        }
+        table[i] = Entry(key, value, true, true);
+        count++;
+    }
+
+    bool remove(string key)
+    {
+        size_t i = hash(key) & mask;
+        while (table[i].used)
+        {
+            if (table[i].filled && table[i].key == key)
+            {
+                table[i].filled = false;
+                count--;
+                return true;
+            }
+            i = (i + 1) & mask;
+        }
+        return false;
+    }
+
+    size_t* opBinaryRight(string op: "in")(string key)
+    {
+        size_t i = hash(key) & mask;
+        while (table[i].used) {
+            if (table[i].filled && table[i].key == key)
+                return &table[i].value;
+            i = (i + 1) & mask;
+        }
+        return null;
+    }
+
+    size_t opIndex(string key)
+    {
+        auto p = key in this;
+        if (!p) throw new Exception("Key not found: "~key);
+        return *p;
+    }
+    
+    size_t opIndexAssign(size_t v, string k)
+    {
+        add(k, v);
+        return v;
+    }
+
+    private void rehash()
+    {
+        auto old = table;
+        size_t cap = table.length * 2;
+        table.length = cap;
+        foreach (ref e; table) e = Entry.init;
+        mask = cap - 1;
+        count = 0;
+        foreach (ref e; old)
+        {
+            if (e.filled)
+                insert(e.key, e.value);
+        }
+    }
+}
 
 interface GsObject
 {
@@ -216,7 +328,7 @@ class GsVirtualMachine: GsObject
     size_t sp;                     // Stack pointer
     size_t cp;                     // Call stack pointer
 
-    size_t[string] jumpTable;      // Function table mapping names to instruction indices
+    LabelMap jumpTable;            // Function table mapping names to instruction indices
     Variant[string] globals;       // Built-in variables
     
   public:
@@ -229,6 +341,8 @@ class GsVirtualMachine: GsObject
         this.ip = 0;
         this.sp = 0;
         this.cp = 0;
+        
+        jumpTable = new LabelMap(1000000);
         
         set("remove", Variant(&vmBuiltinRemove));
         set("removeFront", Variant(&vmBuiltinRemoveFront));
@@ -307,29 +421,6 @@ class GsVirtualMachine: GsObject
     {
         return (name in jumpTable) != null;
     }
-    
-    /*
-    bool call(T...)(string funcName, T args)
-    {
-        if (funcName in jumpTable)
-        {
-            //foreach(arg; args)
-            //    push(Variant(arg));
-            callStack[cp] = ip;
-            GsCallFrame* callFrame = &callFrames[cp];
-            foreach(i, arg; args)
-                callFrame.parameters[i] = Variant(arg);
-            cp++;
-            run(jumpTable[funcName], callFrame);
-            return true;
-        }
-        else
-        {
-            writeln("Unknown function: ", funcName);
-            return false;
-        }
-    }
-    */
 
     void load(GsInstruction[] instructions)
     {
@@ -583,11 +674,11 @@ class GsVirtualMachine: GsObject
                     ip = jumpTable[instruction.operand.get!string];
                     break;
                 case GsInstructionType.JMP_IF:
-                    if (cast(bool)peek().get!double)
+                    if (cast(bool)pop().get!double)
                         ip = jumpTable[instruction.operand.get!string];
                     break;
                 case GsInstructionType.JMP_IF_NOT:
-                    if (!cast(bool)peek().get!double)
+                    if (!cast(bool)pop().get!double)
                         ip = jumpTable[instruction.operand.get!string];
                     break;
                 case GsInstructionType.INDEX_GET:

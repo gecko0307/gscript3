@@ -87,7 +87,7 @@ class GsCodeGenerator
         {
             auto func = cast(ASTFunctionLiteral)node;
             // TODO: qualified name
-            instructions ~= GsInstruction(GsInstructionType.LABEL, Variant(func.generatedName));
+            instructions ~= GsInstruction(GsInstructionType.LABEL, Variant(func.label));
             
             // Function body
             instructions ~= generate(func.bodyBlock);
@@ -154,8 +154,8 @@ class GsCodeGenerator
             
             case NodeType.FunctionLiteral:
                 auto func = cast(ASTFunctionLiteral)node;
-                func.generatedName = getLabel();
-                instructions ~= GsInstruction(GsInstructionType.PUSH, Variant(func.generatedName));
+                func.label = getLabel();
+                instructions ~= GsInstruction(GsInstructionType.PUSH, Variant(func.label));
                 break;
             
             case NodeType.Identifier:
@@ -425,6 +425,14 @@ class GsCodeGenerator
                 instructions ~= generate(node.children[1]); // loop
                 instructions ~= GsInstruction(GsInstructionType.JMP, Variant(labelStartWhile));
                 instructions ~= GsInstruction(GsInstructionType.LABEL, Variant(labelEndWhile));
+                break;
+            
+            case NodeType.DoWhileStatement:
+                string labelStartWhile = getLabel();
+                instructions ~= GsInstruction(GsInstructionType.LABEL, Variant(labelStartWhile));
+                instructions ~= generate(node.children[1]); // loop
+                instructions ~= generate(node.children[0]); // condition
+                instructions ~= GsInstruction(GsInstructionType.JMP_IF, Variant(labelStartWhile));
                 break;
             
             case NodeType.ForStatement:

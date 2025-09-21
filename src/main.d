@@ -128,7 +128,7 @@ void main(string[] args)
     if (instructions.length == 0)
         return;
 
-    debug writeln(instructions);
+    writeln(instructions);
     
     TestObj test = new TestObj();
     Variant[] arr = [Variant(0.0), Variant(40.0), Variant("Hello, World!"), Variant(&printSum)];

@@ -53,6 +53,7 @@ enum NodeType
     PrintStatement,
     IfStatement,
     WhileStatement,
+    DoWhileStatement,
     ForStatement,
     Block,
     FunctionCallExpression,
@@ -317,7 +318,7 @@ class ASTFunction: ASTNode
 
 class ASTFunctionLiteral: ASTNode
 {
-    string generatedName;
+    string label;
     string[] arguments;
     bool isVariadic = false;
     ASTBlock bodyBlock;
@@ -916,6 +917,31 @@ class GsParser
             whileStatement.programScope = program.peekScope();
             return whileStatement;
         }
+        else if (currentToken.value == "do")
+        {
+            eat(GsTokenType.Keyword); // "do"
+            
+            ASTBlock loopBlock = new ASTBlock();
+            loopBlock.programScope = program.pushScope(true);
+            parseImplicitBlock(loopBlock);
+            program.popScope();
+            
+            if (currentToken.value == "while")
+            {
+                eat(GsTokenType.Keyword); // "while"
+                ASTNode conditionExpr = parseExpression();
+                eat(GsTokenType.Semicolon); // ";"
+                
+                ASTNode doWhileStatement = new ASTNode(NodeType.DoWhileStatement, "", [conditionExpr, loopBlock]);
+                doWhileStatement.programScope = program.peekScope();
+                return doWhileStatement;
+            }
+            else
+            {
+                stop("\"while\" expected, not \"" ~ currentToken.value ~ "\"");
+                return null;
+            }
+        }
         else if (currentToken.value == "for")
         {
             eat(GsTokenType.Keyword); // "for"
@@ -940,22 +966,6 @@ class GsParser
         {
             if (program.isRootScope)
             {
-                /*
-                eat(GsTokenType.Keyword); // "func"
-                string name = currentToken.value;
-                eat(GsTokenType.Identifier);
-                string[] funcArguments = parseFunctionArguments();
-                ASTBlock funcBody = new ASTBlock();
-                funcBody.programScope = program.pushScope();
-                foreach(arg; funcArguments)
-                    funcBody.programScope.defineArgument(arg);
-                parseBlock(funcBody);
-                program.popScope();
-                auto func = new ASTFunction(name, funcArguments, funcBody);
-                func.programScope = program.peekScope();
-                return func;
-                */
-                
                 eat(GsTokenType.Keyword); // "func"
                 string name = currentToken.value;
                 eat(GsTokenType.Identifier);

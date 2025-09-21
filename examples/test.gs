@@ -1,9 +1,8 @@
-const obj = {
-    foo: "bar",
-    printFoo: func(self)
-    {
-        print self.foo;
-    }
-};
+let x = 0;
 
-obj.printFoo();
+while(x < 1000000)
+{
+    x += 1;
+}
+
+print x;
