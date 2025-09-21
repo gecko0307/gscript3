@@ -171,7 +171,7 @@ global.printSum(5, 3);
 
 ## Binding Native Objects
 
-Any object that implements `GsObject` interface is compatible with `GsDynamic`:
+You can bind any object that implements `GsObject` interface:
 
 ```
 class MyObj: GsObject
