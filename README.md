@@ -36,9 +36,24 @@ Work-in-progress third iteration of GScript, a mini scripting language for D. Fu
 - `print` instead of `writeln`.
 
 Architecture improvements:
-- A more efficient ISA
+- Fast VM with a more efficient ISA
 - Bytecode can now be serialized into a binary buffer, significantly speeding up the launch of compiled scripts
 - Tighter integration with the D object system. Any D object that inherits from `GsObject` and implements get/set semantics for its properties can be registered in the VM. This gives scripts secure access to the application's internal state.
+
+## Basic Usage
+```
+import gscript;
+
+void main(string[] args)
+{
+    string script = "print \"Hello, World!\";";
+    GsInstruction[] bytecode = compile(script);
+
+    auto vm = new GsVirtualMachine();
+    vm.load(bytecode);
+    vm.run();
+}
+```
 
 ## Objects and Methods
 Objects (key-value collections) are created using JS-like syntax. Objects can have methods (function properties) that always implicitly receive a reference to object itself as a first argument when called.

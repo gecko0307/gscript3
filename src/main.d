@@ -31,6 +31,7 @@ import std.stdio;
 import std.conv;
 import std.file;
 import std.path;
+
 import gscript.instruction_set;
 import gscript.vm;
 import gscript.assembler;
@@ -46,10 +47,10 @@ class TestObj: GsObject
     {
     }
     
-    void foo(GsVirtualMachine vm, size_t argc)
+    GsDynamic foo(GsDynamic[] args)
     {
-        assert(argc == 0);
         writeln("TestObj.foo called");
+        return GsDynamic(0);
     }
     
     GsDynamic get(string key)
@@ -85,9 +86,11 @@ class TestObj: GsObject
 
 GsDynamic printSum(GsDynamic[] args)
 {
-    auto b = args[0].asNumber; // Get the second argument
-    auto a = args[1].asNumber; // Get the first argument
-    writeln("printSum: ", a + b);
+    auto vm = cast(GsVirtualMachine)args[0].asObject;
+    assert(vm !is null);
+    auto a = args[1].asNumber;
+    auto b = args[2].asNumber;
+    writeln(a + b);
     return GsDynamic(0);
 }
 

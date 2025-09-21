@@ -11,8 +11,14 @@ enum GsDynamicType: uint
     Number = 1,
     String = 2,
     Array = 3,
-    Object = 4
+    Object = 4,
+    NativeMethod = 5,
+    NativeFunction = 6
+    // Function = 7
 }
+
+alias GsNativeMethod = GsDynamic delegate(GsDynamic[]);
+alias GsNativeFunc = GsDynamic function(GsDynamic[]);
 
 struct GsDynamic
 {
@@ -20,6 +26,8 @@ struct GsDynamic
     {
         double asNumber;
         GsObject asObject;
+        GsNativeMethod asNativeMethod;
+        GsNativeFunc asNativeFunction;
         GsDynamic[] asArray;
         string asString;
     }
@@ -53,6 +61,16 @@ struct GsDynamic
         {
             asString = value;
             type = GsDynamicType.String;
+        }
+        else static if (isDelegate!T)
+        {
+            asNativeMethod = value;
+            type = GsDynamicType.NativeMethod;
+        }
+        else static if (isFunctionPointer!T)
+        {
+            asNativeFunction = value;
+            type = GsDynamicType.NativeFunction;
         }
         else static assert("Unsupported type for GsDynamic: " ~ T.stringof);
     }

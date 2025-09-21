@@ -220,9 +220,6 @@ class GsGCObject: GsObject
     }
 }
 
-alias GsNativeMethod = GsDynamic delegate(GsDynamic[]);
-alias GsNativeFunc = GsDynamic function(GsDynamic[]);
-
 struct GsCallFrame
 {
     GsDynamic[128] parameters;
@@ -750,24 +747,22 @@ class GsVirtualMachine: GsObject
                     
                     auto func = pop();
                     
-                    /*
                     GsNativeMethod nativeMethod;
                     GsNativeFunc nativeFuncPtr;
                     bool useNativeMethod = false;
                     bool useNativeFunc = false;
                     
-                    if (func.type is typeid(GsNativeMethod))
+                    if (func.type == GsDynamicType.NativeMethod)
                     {
-                        nativeMethod = func.get!GsNativeMethod();
+                        nativeMethod = func.asNativeMethod;
                         useNativeMethod = true;
                     }
-                    else if (func.type is typeid(GsNativeFunc))
+                    else if (func.type == GsDynamicType.NativeFunction)
                     {
-                        nativeFuncPtr = func.get!GsNativeFunc();
+                        nativeFuncPtr = func.asNativeFunction;
                         useNativeFunc = true;
                     }
                     else
-                    */
                     {
                         if (func.type == GsDynamicType.String)
                         {
@@ -791,19 +786,18 @@ class GsVirtualMachine: GsObject
                                 
                                 break;
                             }
-                            /*
                             else if (funcName in globals)
                             {
                                 auto nativeFunc = globals[funcName];
                                 
-                                if (nativeFunc.type is typeid(GsNativeMethod))
+                                if (nativeFunc.type == GsDynamicType.NativeMethod)
                                 {
-                                    nativeMethod = nativeFunc.get!GsNativeMethod();
+                                    nativeMethod = nativeFunc.asNativeMethod;
                                     useNativeMethod = true;
                                 }
-                                else if (nativeFunc.type is typeid(GsNativeFunc))
+                                else if (nativeFunc.type == GsDynamicType.NativeFunction)
                                 {
-                                    nativeFuncPtr = nativeFunc.get!GsNativeFunc();
+                                    nativeFuncPtr = nativeFunc.asNativeFunction;
                                     useNativeFunc = true;
                                 }
                                 else
@@ -813,7 +807,6 @@ class GsVirtualMachine: GsObject
                                     return;
                                 }
                             }
-                            */
                             else
                             {
                                 writefln("Fatality: undefined jump label \"%s\"", funcName);
@@ -829,7 +822,6 @@ class GsVirtualMachine: GsObject
                         }
                     }
                     
-                    /*
                     // Native call: push a new call frame
                     cp++;
                     callFrame = &callFrames[cp];
@@ -851,7 +843,6 @@ class GsVirtualMachine: GsObject
                     cp--;
                     callFrame = &callFrames[cp];
                     push(result);
-                    */
                     
                     break;
                 case GsInstructionType.RET:
