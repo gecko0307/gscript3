@@ -15,9 +15,10 @@ Work-in-progress third iteration of GScript, a mini scripting language for D. Fu
 * [x] Function literals
 * [x] Modules
 * [x] Prototypes
-* [x] if/else
-* [x] while-loop
-* [x] for-loop
+* [x] If/else
+* [x] While loop
+* [x] For loop
+* [x] Variadic arguments
 * [ ] Standard library
 
 ## Main Changes from GScript2
