@@ -8,19 +8,6 @@ Work-in-progress third iteration of GScript, a mini scripting language for D. Fu
 * [x] Codegen
 * [x] Bytecode serializer
 * [x] External state access
-* [x] Basic language features
-* [x] Objects and arrays (partially)
-* [x] Array literals
-* [x] Object literals
-* [x] Function literals
-* [x] Modules
-* [x] Prototypes
-* [x] If/else
-* [x] While loop
-* [x] For loop
-* [x] Do..while loop
-* [x] Variadic arguments
-* [x] Break, continue
 * [ ] Standard library
 
 ## Main Changes from GScript2
