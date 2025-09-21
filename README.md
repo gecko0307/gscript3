@@ -98,8 +98,7 @@ GScript3 implements object-based module system. To reuse code, store it in the `
 
 foo.gs:
 ```
-global.Foo =
-{
+global.Foo = {
     prop: "Foo.prop",
     test: func(self)
     {
@@ -147,4 +146,86 @@ func test
 }
 
 test(5, 10, 20);
+```
+
+## Binding Native Functions
+
+```
+GsDynamic printSum(GsDynamic[] args)
+{
+    auto vm = cast(GsVirtualMachine)args[0].asObject;
+    auto a = args[1].asNumber;
+    auto b = args[2].asNumber;
+    writeln(a + b);
+    return GsDynamic(0);
+}
+
+vm.set("printSum", GsDynamic(&printSum));
+```
+
+Script:
+
+```
+global.printSum(5, 3);
+```
+
+## Binding Native Objects
+
+Any object that implements `GsObject` interface is compatible with `GsDynamic`:
+
+```
+class MyObj: GsObject
+{
+    int x = 0;
+    
+    this()
+    {
+    }
+    
+    GsDynamic foo(GsDynamic[] args)
+    {
+        writeln("MyObj.foo called");
+        return GsDynamic(0);
+    }
+    
+    GsDynamic get(string key)
+    {
+        if (key == "x")
+            return GsDynamic(x);
+        else if (key == "foo")
+            return GsDynamic(&foo);
+        else
+            return GsDynamic(0.0);
+    }
+    
+    void set(string key, GsDynamic value)
+    {
+        if (key == "x")
+            x = cast(int)value.asNumber;
+    }
+    
+    bool contains(string key)
+    {
+        if (key == "x") return true;
+        else return false;
+    }
+    
+    GsObject dup()
+    {
+        MyObj copy = new MyObj();
+        copy.x = x;
+        return copy;
+    }
+}
+
+TestObj test = new TestObj();
+vm.set("test", GsDynamic(test));
+```
+
+Script:
+
+```
+global.test.x = 10;
+print global.test.x;
+global.test.foo();
 ```

@@ -742,7 +742,7 @@ class GsVirtualMachine: GsObject
                         if (i < numParams)
                             callFrame.parameters[numParams - 1 - i] = pop();
                         else
-                            callFrame.parameters[i] = GsDynamic.init;
+                            callFrame.parameters[i] = GsDynamic();
                     }
                     callFrame.numParameters = numParams;
                     
