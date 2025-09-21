@@ -20,6 +20,7 @@ Work-in-progress third iteration of GScript, a mini scripting language for D. Fu
 * [x] For loop
 * [x] Do..while loop
 * [x] Variadic arguments
+* [ ] Break, continue
 * [ ] Standard library
 
 ## Main Changes from GScript2

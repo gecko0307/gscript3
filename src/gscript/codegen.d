@@ -420,33 +420,65 @@ class GsCodeGenerator
             case NodeType.WhileStatement:
                 string labelStartWhile = getLabel();
                 string labelEndWhile = getLabel();
+                auto condition = node.children[0];
+                auto loopBlock = cast(ASTBlock)node.children[1];
+                loopBlock.programScope.breakLabel = labelEndWhile;
+                loopBlock.programScope.continueLabel = labelStartWhile;
                 instructions ~= GsInstruction(GsInstructionType.LABEL, GsDynamic(labelStartWhile));
-                instructions ~= generate(node.children[0]); // condition
+                instructions ~= generate(condition);
                 instructions ~= GsInstruction(GsInstructionType.JMP_IF_NOT, GsDynamic(labelEndWhile));
-                instructions ~= generate(node.children[1]); // loop
+                instructions ~= generate(loopBlock);
                 instructions ~= GsInstruction(GsInstructionType.JMP, GsDynamic(labelStartWhile));
                 instructions ~= GsInstruction(GsInstructionType.LABEL, GsDynamic(labelEndWhile));
                 break;
             
             case NodeType.DoWhileStatement:
                 string labelStartWhile = getLabel();
+                string labelEndWhile = getLabel();
+                auto condition = node.children[0];
+                auto loopBlock = cast(ASTBlock)node.children[1];
+                loopBlock.programScope.breakLabel = labelEndWhile;
+                loopBlock.programScope.continueLabel = labelStartWhile;
                 instructions ~= GsInstruction(GsInstructionType.LABEL, GsDynamic(labelStartWhile));
-                instructions ~= generate(node.children[1]); // loop
-                instructions ~= generate(node.children[0]); // condition
+                instructions ~= generate(loopBlock); // loop
+                instructions ~= generate(condition); // condition
                 instructions ~= GsInstruction(GsInstructionType.JMP_IF, GsDynamic(labelStartWhile));
+                instructions ~= GsInstruction(GsInstructionType.LABEL, GsDynamic(labelEndWhile));
                 break;
             
             case NodeType.ForStatement:
                 string labelStartFor = getLabel();
                 string labelEndFor = getLabel();
-                instructions ~= generate(node.children[0]); // initialization
+                auto initialization = node.children[0];
+                auto condition = node.children[1];
+                auto loopBlock = cast(ASTBlock)node.children[2];
+                auto advancement = node.children[3];
+                loopBlock.programScope.breakLabel = labelEndFor;
+                loopBlock.programScope.continueLabel = labelStartFor;
+                instructions ~= generate(initialization); // initialization
                 instructions ~= GsInstruction(GsInstructionType.LABEL, GsDynamic(labelStartFor));
-                instructions ~= generate(node.children[1]); // condition
+                instructions ~= generate(condition); // condition
                 instructions ~= GsInstruction(GsInstructionType.JMP_IF_NOT, GsDynamic(labelEndFor));
-                instructions ~= generate(node.children[2]); // loop
-                instructions ~= generate(node.children[3]); // advancement
+                instructions ~= generate(loopBlock); // loop
+                instructions ~= generate(advancement); // advancement
                 instructions ~= GsInstruction(GsInstructionType.JMP, GsDynamic(labelStartFor));
                 instructions ~= GsInstruction(GsInstructionType.LABEL, GsDynamic(labelEndFor));
+                break;
+            
+            case NodeType.BreakStatement:
+                string breakLabel = node.getBreakLabel();
+                if (breakLabel.length)
+                    instructions ~= GsInstruction(GsInstructionType.JMP, GsDynamic(breakLabel));
+                else
+                    throw new Exception("Illegal \"break\"");
+                break;
+            
+            case NodeType.ContinueStatement:
+                string continueLabel = node.getContinueLabel();
+                if (continueLabel.length)
+                    instructions ~= GsInstruction(GsInstructionType.JMP, GsDynamic(continueLabel));
+                else
+                    throw new Exception("Illegal \"continue\"");
                 break;
             
             case NodeType.Function:

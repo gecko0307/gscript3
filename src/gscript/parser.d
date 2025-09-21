@@ -56,6 +56,8 @@ enum NodeType
     WhileStatement,
     DoWhileStatement,
     ForStatement,
+    BreakStatement,
+    ContinueStatement,
     Block,
     FunctionCallExpression,
     IndexAccessExpression,
@@ -154,6 +156,8 @@ class Scope
     GsVariable[string] variables;
     int nextArgumentIndex = 0;
     GsVariable[string] arguments;
+    string breakLabel;
+    string continueLabel;
     
     this(Scope parentScope = null)
     {
@@ -249,6 +253,26 @@ class Scope
         else
             return -1;
     }
+    
+    string getBreakLabel()
+    {
+        if (breakLabel.length)
+            return breakLabel;
+        else if (parent)
+            return parent.getBreakLabel();
+        else
+            return "";
+    }
+    
+    string getContinueLabel()
+    {
+        if (continueLabel.length)
+            return continueLabel;
+        else if (parent)
+            return parent.getContinueLabel();
+        else
+            return "";
+    }
 }
 
 class ASTNode
@@ -281,6 +305,22 @@ class ASTNode
         {
             child.print(indent ~ "  ");
         }
+    }
+    
+    string getBreakLabel()
+    {
+        if (programScope)
+            return programScope.getBreakLabel();
+        else
+            return "";
+    }
+    
+    string getContinueLabel()
+    {
+        if (programScope)
+            return programScope.getContinueLabel();
+        else
+            return "";
     }
 }
 
@@ -948,7 +988,6 @@ class GsParser
             eat(GsTokenType.Keyword); // "for"
             eat(GsTokenType.OpeningBracket); // "("
             ASTNode initExpr = parseStatement();
-            //eat(GsTokenType.Semicolon); // ";"
             ASTNode conditionExpr = parseExpression();
             eat(GsTokenType.Semicolon); // ";"
             ASTNode advanceExpr = parseExpression();
@@ -962,6 +1001,22 @@ class GsParser
             ASTNode forStatement = new ASTNode(NodeType.ForStatement, "", [initExpr, conditionExpr, advanceExpr, loopBlock]);
             forStatement.programScope = program.peekScope();
             return forStatement;
+        }
+        else if (currentToken.value == "break")
+        {
+            eat(GsTokenType.Keyword); // "break"
+            ASTNode breakStatement = new ASTNode(NodeType.BreakStatement, "");
+            breakStatement.programScope = program.peekScope();
+            eat(GsTokenType.Semicolon); // ";"
+            return breakStatement;
+        }
+        else if (currentToken.value == "continue")
+        {
+            eat(GsTokenType.Keyword); // "continue"
+            ASTNode contStatement = new ASTNode(NodeType.ContinueStatement, "");
+            contStatement.programScope = program.peekScope();
+            eat(GsTokenType.Semicolon); // ";"
+            return contStatement;
         }
         else if (currentToken.value == "func")
         {
