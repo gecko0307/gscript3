@@ -619,7 +619,7 @@ class GsVirtualMachine: GsObject
                     auto arrayParam = pop();
                     if (arrayParam.peek!(Variant[]) !is null)
                     {
-                        auto array = pop().get!(Variant[]);
+                        auto array = arrayParam.get!(Variant[]);
                         auto value = pop();
                         if (index >= 0 && index < array.length)
                             array[index] = value;
@@ -779,6 +779,10 @@ class GsVirtualMachine: GsObject
                 case GsInstructionType.LOAD_ARG:
                     size_t vIndex = cast(size_t)instruction.operand.get!double;
                     push(callFrames[cp].parameters[vIndex]); // Load a parameter onto the stack
+                    break;
+                case GsInstructionType.LOAD_ARGS:
+                    auto frame = &callFrames[cp];
+                    push(Variant(frame.parameters[0..frame.numParameters])); // Load all parameters onto the stack
                     break;
                 case GsInstructionType.GLOBAL_STORE_VAR:
                     size_t vIndex = cast(size_t)instruction.operand.get!double;

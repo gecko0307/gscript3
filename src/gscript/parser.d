@@ -61,7 +61,9 @@ enum NodeType
     MemberPropertyAccessExpression,
     MemberCallExpression,
     KeyValueExpression,
-    NewExpression
+    NewExpression,
+    ArgumentExpression,
+    ArgumentsArrayExpression
 }
 
 immutable string[] assignOperators = [
@@ -292,6 +294,7 @@ class ASTFunction: ASTNode
 {
     string name;
     string[] arguments;
+    bool isVariadic = false;
     ASTBlock bodyBlock;
     
     this(string name, string[] arguments, ASTBlock bodyBlock)
@@ -316,6 +319,7 @@ class ASTFunctionLiteral: ASTNode
 {
     string generatedName;
     string[] arguments;
+    bool isVariadic = false;
     ASTBlock bodyBlock;
     
     this(string[] arguments, ASTBlock bodyBlock)
@@ -707,6 +711,29 @@ class GsParser
             parseObject(node);
             return node;
         }
+        else if (currentToken.value == "$")
+        {
+            eat(GsTokenType.Operator); // "$"
+            if (currentToken.type == GsTokenType.Number)
+            {
+                auto node = new ASTNode(NodeType.ArgumentExpression, currentToken.value);
+                node.programScope = program.peekScope();
+                eat(GsTokenType.Number);
+                return node;
+            }
+            else if (currentToken.value == "$")
+            {
+                auto node = new ASTNode(NodeType.ArgumentsArrayExpression, "");
+                node.programScope = program.peekScope();
+                eat(GsTokenType.Operator); // "$"
+                return node;
+            }
+            else
+            {
+                stop("Unexpected token \"" ~ currentToken.value ~ "\" in argument expression");
+                return null;
+            }
+        }
         else if (currentToken.value == "new")
         {
             eat(GsTokenType.Keyword); // "new"
@@ -733,7 +760,16 @@ class GsParser
         else if (currentToken.value == "func")
         {
             eat(GsTokenType.Keyword); // "func"
-            string[] funcArguments = parseFunctionArguments();
+            string[] funcArguments;
+            bool isVariadic = false;
+            if (currentToken.type == GsTokenType.OpeningBracket)
+            {
+                funcArguments = parseFunctionArguments();
+            }
+            else
+            {
+                isVariadic = true;
+            }
             ASTBlock funcBody = new ASTBlock();
             funcBody.programScope = program.pushScope();
             foreach(arg; funcArguments)
@@ -741,6 +777,7 @@ class GsParser
             parseBlock(funcBody);
             program.popScope();
             auto func = new ASTFunctionLiteral(funcArguments, funcBody);
+            func.isVariadic = isVariadic;
             func.programScope = program.peekScope();
             return func;
         }
@@ -903,6 +940,7 @@ class GsParser
         {
             if (program.isRootScope)
             {
+                /*
                 eat(GsTokenType.Keyword); // "func"
                 string name = currentToken.value;
                 eat(GsTokenType.Identifier);
@@ -914,6 +952,31 @@ class GsParser
                 parseBlock(funcBody);
                 program.popScope();
                 auto func = new ASTFunction(name, funcArguments, funcBody);
+                func.programScope = program.peekScope();
+                return func;
+                */
+                
+                eat(GsTokenType.Keyword); // "func"
+                string name = currentToken.value;
+                eat(GsTokenType.Identifier);
+                string[] funcArguments;
+                bool isVariadic = false;
+                if (currentToken.type == GsTokenType.OpeningBracket)
+                {
+                    funcArguments = parseFunctionArguments();
+                }
+                else
+                {
+                    isVariadic = true;
+                }
+                ASTBlock funcBody = new ASTBlock();
+                funcBody.programScope = program.pushScope();
+                foreach(arg; funcArguments)
+                    funcBody.programScope.defineArgument(arg);
+                parseBlock(funcBody);
+                program.popScope();
+                auto func = new ASTFunction(name, funcArguments, funcBody);
+                func.isVariadic = isVariadic;
                 func.programScope = program.peekScope();
                 return func;
             }

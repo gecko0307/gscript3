@@ -28,6 +28,7 @@ Work-in-progress third iteration of GScript, a mini scripting language for D. Fu
 - JS-like object literals istead of prototype functions: `{ foo: "bar" }`
 - Prototype inheritance instead of shallow-copy; see below
 - New module system; see below
+- A new, more efficient variadic arguments system; see below
 - No explicit referencing. Function reference is passed without `ref` keyword
 - Array length is now returned by the built-in `length` property instead of a global `length` function
 - `print` instead of `writeln`.
@@ -81,4 +82,32 @@ f.test();      // prints 10 (inherited from prototype)
 
 f.prop = 5;
 f.test();      // prints 5 (now overrides prototype property)
+```
+
+## Variadic Arguments
+In GScript3, all functions can accept any number of arguments. Named arguments list is optional. Anonymous arguments are accessed with `$` operator:
+
+```
+func test
+{
+    print $0;
+    print $1;
+    print $2;
+}
+
+test(5, 10, 20);
+```
+
+A special operator `$$` retrieves all arguments passed with the call as a mutable array. It is actually a slice to the stack frame parameters, so a new array is not created.
+
+```
+func test
+{
+    const args = $$;
+    print args.length;
+    args[0] = 100;
+    print $$; // first argument is now 100
+}
+
+test(5, 10, 20);
 ```

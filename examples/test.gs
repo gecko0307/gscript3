@@ -1,9 +1,10 @@
-func main()
+func test
 {
-    for (let x = 0; x < 10; x += 1)
-    {
-        print x;
-    }
+    const args = $$;
+    print args.length;
+    args[0] = 100;
+    print $$;
 }
 
-main();
+test(5, 10, 20);
+

@@ -389,6 +389,14 @@ class GsCodeGenerator
                 instructions ~= GsInstruction(GsInstructionType.REUSE);
                 break;
             
+            case NodeType.ArgumentExpression:
+                instructions ~= GsInstruction(GsInstructionType.LOAD_ARG, Variant(node.value.to!double));
+                break;
+            
+            case NodeType.ArgumentsArrayExpression:
+                instructions ~= GsInstruction(GsInstructionType.LOAD_ARGS);
+                break;
+            
             case NodeType.IfStatement:
                 string labelEndIf = getLabel();
                 instructions ~= generate(node.children[0]); // condition
