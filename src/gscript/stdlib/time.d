@@ -55,9 +55,9 @@ class GsGlobalTime: GsGCObject
 
         double ts = args[1].asNumber;
         
-        bool useTimezone = true;
+        bool local = true;
         if (args.length >= 3)
-            useTimezone = cast(bool)args[2].asNumber;
+            local = cast(bool)args[2].asNumber;
 
         long secs = cast(long)ts;
         double frac = ts - secs;
@@ -65,10 +65,10 @@ class GsGlobalTime: GsGCObject
         SysTime st;
         SysTime dt;
 
-        if (useTimezone)
+        if (local)
         {
             st = SysTime(unixTimeToStdTime(secs));
-            dt = st;
+            dt = st.toLocalTime();
         }
         else
         {
