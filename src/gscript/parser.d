@@ -146,6 +146,7 @@ struct GsVariable
     int index;
     bool isConst;
     bool isInitialized;
+    int depth;
 }
 
 class Scope
@@ -158,6 +159,7 @@ class Scope
     GsVariable[string] arguments;
     string breakLabel;
     string continueLabel;
+    int nestingDepth;
     
     this(Scope parentScope = null)
     {
@@ -165,6 +167,11 @@ class Scope
         if (parent)
         {
             parent.addChildScope(this);
+            nestingDepth = parent.nestingDepth + 1;
+        }
+        else
+        {
+            nestingDepth = 0;
         }
     }
     
@@ -188,14 +195,14 @@ class Scope
         }
     }
     
-    int defineVariable(string name, bool isConst = false)
+    protected int defineVariable(int depth, string name, bool isConst = false)
     {
         if (parent is null)
         {
             if (!(name in variables) && !(name in arguments))
             {
                 int index = nextLocalIndex;
-                variables[name] = GsVariable(index, isConst, false);
+                variables[name] = GsVariable(index, isConst, false, depth);
                 nextLocalIndex++;
                 return index;
             }
@@ -206,8 +213,13 @@ class Scope
         }
         else
         {
-            return parent.defineVariable(name, isConst);
+            return parent.defineVariable(depth, name, isConst);
         }
+    }
+    
+    int defineVariable(string name, bool isConst = false)
+    {
+        return defineVariable(nestingDepth, name, isConst);
     }
     
     bool isArgumentVisible(string name)
@@ -220,14 +232,22 @@ class Scope
             return false;
     }
     
-    bool isVariableVisible(string name)
+    bool isVariableVisible(string name, int accessDepth)
     {
         if (name in variables)
-            return true;
+        {
+            auto v = variables[name];
+            return v.depth <= accessDepth;
+        }
         else if (parent)
-            return parent.isVariableVisible(name);
+            return parent.isVariableVisible(name, accessDepth);
         else
             return false;
+    }
+    
+    bool isVariableVisible(string name)
+    {
+        return isVariableVisible(name, nestingDepth);
     }
     
     GsVariable* getVariable(string name)
@@ -336,6 +356,15 @@ class ASTBlock: ASTNode
     this()
     {
         super(NodeType.Block, "");
+    }
+    
+    override void print(string indent = "")
+    {
+        writeln(indent, type, " ", programScope.nestingDepth);
+        foreach(ASTNode child; children)
+        {
+            child.print(indent ~ "  ");
+        }
     }
 }
 
