@@ -39,6 +39,7 @@ class GsGlobalIO: GsGCObject
     {
         set("writeFile", GsDynamic(&mWriteFile));
         set("readFile", GsDynamic(&mReadFile));
+        set("fileExists", GsDynamic(&mFileExists));
     }
     
     GsDynamic mWriteFile(GsDynamic[] args)
@@ -91,5 +92,18 @@ class GsGlobalIO: GsGCObject
         }
         
         return GsDynamic(data);
+    }
+    
+    GsDynamic mFileExists(GsDynamic[] args)
+    {
+        if (args.length < 1)
+            return GsDynamic(0);
+
+        if (args[1].type != GsDynamicType.String)
+            return GsDynamic(0);
+        
+        string filename = args[1].asString;
+        
+        return GsDynamic(exists(filename));
     }
 }
