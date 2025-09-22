@@ -190,16 +190,23 @@ class Scope
     
     int defineVariable(string name, bool isConst = false)
     {
-        if (!(name in variables) && !(name in arguments))
+        if (parent is null)
         {
-            int index = nextLocalIndex;
-            variables[name] = GsVariable(index, isConst, false);
-            nextLocalIndex++;
-            return index;
+            if (!(name in variables) && !(name in arguments))
+            {
+                int index = nextLocalIndex;
+                variables[name] = GsVariable(index, isConst, false);
+                nextLocalIndex++;
+                return index;
+            }
+            else
+            {
+                throw new Exception("Redefinition of variable \"" ~ name ~ "\"");
+            }
         }
         else
         {
-            throw new Exception("Redefinition of variable \"" ~ name ~ "\"");
+            return parent.defineVariable(name, isConst);
         }
     }
     
