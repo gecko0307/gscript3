@@ -638,6 +638,21 @@ class GsVirtualMachine: GsObject
                             return;
                         }
                     }
+                    else if (arrayParam.type == GsDynamicType.String)
+                    {
+                        auto str = arrayParam.asString;
+                        if (index >= 0 && index < str.length)
+                        {
+                            push(GsDynamic(cast(double)str[index]));
+                            break;
+                        }
+                        else
+                        {
+                            writeln("Fatality: index is outside string length");
+                            finalize();
+                            return;
+                        }
+                    }
                     else
                     {
                         writefln("Fatality: attempting to index %s which is not an array", arrayParam.type);
