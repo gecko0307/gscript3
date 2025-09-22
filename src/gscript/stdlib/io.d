@@ -37,9 +37,45 @@ class GsGlobalIO: GsGCObject
 {
     this()
     {
+        set("write", GsDynamic(&mWrite));
+        set("writeln", GsDynamic(&mWriteln));
+        set("readln", GsDynamic(&mReadln));
         set("writeFile", GsDynamic(&mWriteFile));
         set("readFile", GsDynamic(&mReadFile));
         set("fileExists", GsDynamic(&mFileExists));
+    }
+    
+    GsDynamic mWrite(GsDynamic[] args)
+    {
+        if (args.length < 1)
+            return GsDynamic(0);
+        
+        foreach(v; args[1..$])
+        {
+            std.stdio.write(v);
+        }
+        
+        return GsDynamic(1);
+    }
+    
+    GsDynamic mWriteln(GsDynamic[] args)
+    {
+        if (args.length < 1)
+            return GsDynamic(0);
+        
+        foreach(v; args[1..$])
+        {
+            std.stdio.write(v);
+        }
+        
+        std.stdio.write('\n');
+        
+        return GsDynamic(1);
+    }
+    
+    GsDynamic mReadln(GsDynamic[] args)
+    {
+        return GsDynamic(std.stdio.readln());
     }
     
     GsDynamic mWriteFile(GsDynamic[] args)
