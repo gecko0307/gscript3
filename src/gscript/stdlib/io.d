@@ -43,6 +43,7 @@ class GsGlobalIO: GsGCObject
         set("writeFile", GsDynamic(&mWriteFile));
         set("readFile", GsDynamic(&mReadFile));
         set("fileExists", GsDynamic(&mFileExists));
+        set("fileModificationTime", GsDynamic(&mFileModificationTime));
     }
     
     GsDynamic mWrite(GsDynamic[] args)
@@ -141,5 +142,20 @@ class GsGlobalIO: GsGCObject
         string filename = args[1].asString;
         
         return GsDynamic(exists(filename));
+    }
+    
+    GsDynamic mFileModificationTime(GsDynamic[] args)
+    {
+        if (args.length < 1)
+            return GsDynamic(0);
+
+        if (args[1].type != GsDynamicType.String)
+            return GsDynamic(0);
+        
+        string filename = args[1].asString;
+        
+        auto st = timeLastModified(filename);
+        double ts = cast(double)st.toUnixTime();
+        return GsDynamic(ts);
     }
 }

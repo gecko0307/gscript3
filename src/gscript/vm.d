@@ -39,6 +39,7 @@ import gscript.dynamic;
 import gscript.labelmap;
 import gscript.stdlib.str;
 import gscript.stdlib.io;
+import gscript.stdlib.time;
 
 interface GsObject
 {
@@ -263,6 +264,7 @@ class GsVirtualMachine: GsObject
     
     GsGlobalStr globStr;
     GsGlobalIO globIO;
+    GsGlobalTime globTime;
     
   public:
 
@@ -288,6 +290,9 @@ class GsVirtualMachine: GsObject
         
         globIO = new GsGlobalIO();
         globals["io"] = GsDynamic(globIO);
+        
+        globTime = new GsGlobalTime();
+        globals["time"] = GsDynamic(globTime);
     }
     
     GsDynamic get(string key)
