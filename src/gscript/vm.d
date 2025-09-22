@@ -31,10 +31,14 @@ import std.stdio;
 import std.conv;
 import std.traits;
 import std.algorithm;
+import std.array;
+import std.ascii;
 
 import gscript.instruction_set;
 import gscript.dynamic;
 import gscript.labelmap;
+import gscript.stdlib.str;
+import gscript.stdlib.io;
 
 interface GsObject
 {
@@ -255,6 +259,10 @@ class GsVirtualMachine: GsObject
 
     LabelMap jumpTable;            // Function table mapping names to instruction indices
     GsDynamic[string] globals;     // Built-in variables
+    GsDynamic[string] builtins;    // Built-in methods
+    
+    GsGlobalStr globStr;
+    GsGlobalIO globIO;
     
   public:
 
@@ -269,11 +277,17 @@ class GsVirtualMachine: GsObject
         
         jumpTable = new LabelMap(1000000);
         
-        set("remove", GsDynamic(&vmBuiltinRemove));
-        set("removeFront", GsDynamic(&vmBuiltinRemoveFront));
-        set("removeBack", GsDynamic(&vmBuiltinRemoveBack));
-        set("insert", GsDynamic(&vmBuiltinInsert));
-        set("slice", GsDynamic(&vmBuiltinSlice));
+        builtins["remove"] = GsDynamic(&vmBuiltinRemove);
+        builtins["removeFront"] = GsDynamic(&vmBuiltinRemoveFront);
+        builtins["removeBack"] = GsDynamic(&vmBuiltinRemoveBack);
+        builtins["insert"] = GsDynamic(&vmBuiltinInsert);
+        builtins["slice"] = GsDynamic(&vmBuiltinSlice);
+        
+        globStr = new GsGlobalStr();
+        globals["string"] = GsDynamic(globStr);
+        
+        globIO = new GsGlobalIO();
+        globals["io"] = GsDynamic(globIO);
     }
     
     GsDynamic get(string key)
@@ -294,7 +308,6 @@ class GsVirtualMachine: GsObject
     {
         return (key in globals) !is null;
     }
-    
     
     GsObject dup()
     {
@@ -713,9 +726,9 @@ class GsVirtualMachine: GsObject
                                 
                                 break;
                             }
-                            else if (funcName in globals)
+                            else if (funcName in builtins)
                             {
-                                auto nativeFunc = globals[funcName];
+                                auto nativeFunc = builtins[funcName];
                                 
                                 if (nativeFunc.type == GsDynamicType.NativeMethod)
                                 {
