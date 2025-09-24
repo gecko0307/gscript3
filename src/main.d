@@ -77,12 +77,19 @@ class TestObj: GsObject
         else return false;
     }
     
+    void setPrototype(GsObject proto)
+    {
+        // No-op
+    }
+    
+    /*
     GsObject dup()
     {
         TestObj newObj = new TestObj();
         newObj.x = x;
         return newObj;
     }
+    */
 }
 
 GsDynamic printSum(GsDynamic[] args)

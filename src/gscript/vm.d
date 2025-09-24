@@ -46,7 +46,9 @@ interface GsObject
     GsDynamic get(string key);
     void set(string key, GsDynamic value);
     bool contains(string key);
-    GsObject dup();
+    void setPrototype(GsObject);
+    
+    //GsObject dup();
     
     final GsDynamic opIndex(string key)
     {
@@ -67,6 +69,7 @@ class GsGCObject: GsObject
 {
     protected:
     
+    GsObject prototype;
     GsDynamic[string] storage;
     
     public:
@@ -82,14 +85,8 @@ class GsGCObject: GsObject
             return *v;
         else
         {
-            auto proto = "__proto__" in storage;
-            if (proto)
-            {
-                if (proto.type == GsDynamicType.Object)
-                    return proto.asObject.get(key);
-                else
-                    return GsDynamic();
-            }
+            if (prototype)
+                return prototype.get(key);
             else
                 return GsDynamic();
         }
@@ -106,19 +103,19 @@ class GsGCObject: GsObject
             return true;
         else
         {
-            auto proto = "__proto__" in storage;
-            if (proto)
-            {
-                if (proto.type == GsDynamicType.Object)
-                    return proto.asObject.contains(key);
-                else
-                    return false;
-            }
+            if (prototype)
+                return prototype.contains(key);
             else
                 return false;
         }
     }
     
+    void setPrototype(GsObject proto)
+    {
+        prototype = proto;
+    }
+    
+    /*
     GsObject dup()
     {
         GsGCObject newObj = new GsGCObject();
@@ -128,6 +125,7 @@ class GsGCObject: GsObject
         }
         return newObj;
     }
+    */
 }
 
 struct GsCallFrame
@@ -314,6 +312,12 @@ class GsVirtualMachine: GsObject
         return (key in globals) !is null;
     }
     
+    void setPrototype(GsObject proto)
+    {
+        // No-op
+    }
+    
+    /*
     GsObject dup()
     {
         GsGCObject newObj = new GsGCObject();
@@ -323,6 +327,7 @@ class GsVirtualMachine: GsObject
         }
         return newObj;
     }
+    */
 
     // Stack manipulation methods
     GsDynamic pop()
@@ -847,7 +852,8 @@ class GsVirtualMachine: GsObject
                     if (param.type == GsDynamicType.Object)
                     {
                         auto newObj = createObject();
-                        newObj.set("__proto__", param);
+                        //newObj.set("__proto__", param);
+                        newObj.setPrototype(param.asObject);
                         push(GsDynamic(newObj));
                     }
                     else

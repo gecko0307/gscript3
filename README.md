@@ -28,7 +28,8 @@ Architecture improvements:
 - Bytecode can now be serialized into a binary buffer, significantly speeding up the launch of compiled scripts
 - Tighter integration with the D object system. Any D object that inherits from `GsObject` and implements get/set semantics for its properties can be registered in the VM. This gives scripts secure access to the application's internal state.
 
-## Basic Usage
+## Usage
+Basic script compilation and running:
 ```
 import gscript;
 
@@ -41,6 +42,91 @@ void main(string[] args)
     vm.load(bytecode);
     vm.run();
 }
+```
+
+Binding native functions:
+
+```
+GsDynamic printSum(GsDynamic[] args)
+{
+    auto vm = cast(GsVirtualMachine)args[0].asObject;
+    auto a = args[1].asNumber;
+    auto b = args[2].asNumber;
+    writeln(a + b);
+    return GsDynamic(0);
+}
+
+vm["printSum"] = &printSum;
+```
+
+Script:
+
+```
+global.printSum(5, 3);
+```
+
+You can bind any object that implements `GsObject` interface:
+
+```
+class MyObj: GsObject
+{
+    GsObject prototype;
+    
+    int x = 0;
+    
+    this()
+    {
+    }
+    
+    GsDynamic foo(GsDynamic[] args)
+    {
+        writeln("MyObj.foo called");
+        return GsDynamic(0);
+    }
+    
+    GsDynamic get(string key)
+    {
+        if (key == "x")
+            return GsDynamic(x);
+        else if (key == "foo")
+            return GsDynamic(&foo);
+        else
+            return GsDynamic(0.0);
+    }
+    
+    void set(string key, GsDynamic value)
+    {
+        if (key == "x")
+            x = cast(int)value.asNumber;
+    }
+    
+    bool contains(string key)
+    {
+        if (key == "x") return true;
+        else return false;
+    }
+    
+    void setPrototype(GsObject proto)
+    {
+        prototype = proto;
+    }
+    
+    GsObject getPrototype()
+    {
+        return prototype;
+    }
+}
+
+TestObj test = new TestObj();
+vm["test"] = test;
+```
+
+Script:
+
+```
+global.test.x = 10;
+print global.test.x;
+global.test.foo();
 ```
 
 ## Objects and Methods
@@ -134,86 +220,4 @@ func test
 }
 
 test(5, 10, 20);
-```
-
-## Binding Native Functions
-
-```
-GsDynamic printSum(GsDynamic[] args)
-{
-    auto vm = cast(GsVirtualMachine)args[0].asObject;
-    auto a = args[1].asNumber;
-    auto b = args[2].asNumber;
-    writeln(a + b);
-    return GsDynamic(0);
-}
-
-vm["printSum"] = &printSum;
-```
-
-Script:
-
-```
-global.printSum(5, 3);
-```
-
-## Binding Native Objects
-
-You can bind any object that implements `GsObject` interface:
-
-```
-class MyObj: GsObject
-{
-    int x = 0;
-    
-    this()
-    {
-    }
-    
-    GsDynamic foo(GsDynamic[] args)
-    {
-        writeln("MyObj.foo called");
-        return GsDynamic(0);
-    }
-    
-    GsDynamic get(string key)
-    {
-        if (key == "x")
-            return GsDynamic(x);
-        else if (key == "foo")
-            return GsDynamic(&foo);
-        else
-            return GsDynamic(0.0);
-    }
-    
-    void set(string key, GsDynamic value)
-    {
-        if (key == "x")
-            x = cast(int)value.asNumber;
-    }
-    
-    bool contains(string key)
-    {
-        if (key == "x") return true;
-        else return false;
-    }
-    
-    GsObject dup()
-    {
-        MyObj copy = new MyObj();
-        copy.x = x;
-        return copy;
-    }
-}
-
-TestObj test = new TestObj();
-vm["test"] = test;
-```
-
-Script:
-
-```
-global.test.x = 10;
-print global.test.x;
-global.test.foo();
 ```
