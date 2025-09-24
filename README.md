@@ -110,11 +110,6 @@ class MyObj: GsObject
     {
         prototype = proto;
     }
-    
-    GsObject getPrototype()
-    {
-        return prototype;
-    }
 }
 
 TestObj test = new TestObj();
