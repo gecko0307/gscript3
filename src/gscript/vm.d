@@ -264,6 +264,8 @@ class GsVirtualMachine: GsObject
     GsGlobalIO globIO;
     GsGlobalTime globTime;
     
+    size_t callDepth = 1;
+    
   public:
 
     this()
@@ -371,6 +373,25 @@ class GsVirtualMachine: GsObject
     {
         return (name in jumpTable) != null;
     }
+    
+    void call(string jumpLabel, GsDynamic[] args)
+    {
+        if (jumpLabel in jumpTable)
+        {
+            auto callFrame = &callFrames[0];
+            for(size_t i = 0; i < args.length; i++)
+            {
+                callFrame.parameters[i] = args[i];
+            }
+            callFrame.numParameters = args.length;
+            callDepth = 0;
+            run(jumpTable[jumpLabel], 0);
+        }
+        else
+        {
+            writeln("Error: unknown jump label \"", jumpLabel, "\"");
+        }
+    }
 
     void load(GsInstruction[] instructions)
     {
@@ -396,17 +417,17 @@ class GsVirtualMachine: GsObject
         ip = instructions.length - 1;
     }
     
-    void run(size_t initialIp = 0)
+    void run(size_t initialIp = 0, size_t initialCallDepth = 1)
     {
         ip = initialIp;
         sp = 0;
         cp = 0;
         GsCallFrame* callFrame = &callFrames[cp];
+        callDepth = initialCallDepth;
         
         while (ip < instructions.length)
         {
             auto instruction = instructions[ip++];
-            //writeln(instruction);
             switch (instruction.type)
             {
                 case GsInstructionType.LABEL:
@@ -749,6 +770,8 @@ class GsVirtualMachine: GsObject
                                 
                                 ip = jumpTable[funcName]; // Jump to the function's starting instruction
                                 
+                                callDepth++;
+                                
                                 break;
                             }
                             else if (funcName in builtins)
@@ -811,9 +834,18 @@ class GsVirtualMachine: GsObject
                     
                     break;
                 case GsInstructionType.RET:
-                    cp--;
-                    ip = callStack[cp]; // Pop the return address from the call stack
-                    callFrame = &callFrames[cp];
+                    if (callDepth > 0)
+                    {
+                        cp--;
+                        ip = callStack[cp]; // Pop the return address from the call stack
+                        callFrame = &callFrames[cp];
+                        callDepth--;
+                    }
+                    else
+                    {
+                        finalize();
+                        return;
+                    }
                     break;
                 case GsInstructionType.STORE_VAR:
                     size_t vIndex = cast(size_t)instruction.operand.asNumber;
