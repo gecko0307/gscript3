@@ -32,6 +32,19 @@ Architecture improvements:
 - Tighter integration with the D object system. Any D object that inherits from `GsObject` and implements get/set semantics for its properties can be registered in the VM. This gives scripts secure access to the application's internal state.
 
 ## Usage
+
+Run a script:
+
+`gs -i script.gs`
+
+Compile a script to bytecode:
+
+`gs -c -i script.gs`
+
+## Embedding
+
+Gscript3 is not a DUB package yet, and the embedding API is unstable.
+
 Basic script compilation and running:
 ```
 import gscript;
