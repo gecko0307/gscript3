@@ -43,7 +43,7 @@ Compile a script to bytecode:
 
 ## Embedding
 
-Gscript3 is not a DUB package yet, and the embedding API is unstable.
+Note: Gscript3 is not a DUB package yet; the embedding API is unstable.
 
 Basic script compilation and running:
 ```
