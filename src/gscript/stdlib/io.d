@@ -30,13 +30,15 @@ module gscript.stdlib.io;
 import std.stdio;
 import std.file;
 
+import gscript.arena;
 import gscript.dynamic;
 import gscript.vm;
 
-class GsGlobalIO: GsGCObject
+class GsGlobalIO: GsArenaObject
 {
-    this()
+    this(GsArena arena)
     {
+        super(arena);
         set("write", GsDynamic(&mWrite));
         set("writeln", GsDynamic(&mWriteln));
         set("readln", GsDynamic(&mReadln));

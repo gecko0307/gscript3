@@ -33,6 +33,8 @@ import std.file;
 import std.path;
 import std.datetime: SysTime;
 
+import dlib.core.memory;
+
 import gscript.instruction_set;
 import gscript.vm;
 import gscript.assembler;
@@ -168,7 +170,7 @@ void main(string[] args)
     TestObj test = new TestObj();
     GsDynamic[] arr = [GsDynamic(0.0), GsDynamic(40.0), GsDynamic("Hello, World!"), GsDynamic(&printSum)];
 
-    auto vm = new GsVirtualMachine();
+    auto vm = New!GsVirtualMachine(null);
     vm["foo"] = 100;
     vm["printSum"] = &printSum;
     vm["test"] = test;

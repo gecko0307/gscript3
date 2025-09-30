@@ -34,6 +34,11 @@ import std.algorithm;
 import std.array;
 import std.ascii;
 
+import dlib.core.memory;
+import dlib.core.ownership;
+import dlib.container.dict;
+
+import gscript.arena;
 import gscript.instruction_set;
 import gscript.dynamic;
 import gscript.labelmap;
@@ -47,8 +52,6 @@ interface GsObject
     void set(string key, GsDynamic value);
     bool contains(string key);
     void setPrototype(GsObject);
-    
-    //GsObject dup();
     
     final GsDynamic opIndex(string key)
     {
@@ -65,19 +68,23 @@ interface GsObject
     }
 }
 
-class GsGCObject: GsObject
+class GsArenaObject: GsObject
 {
-    protected:
-    
+    GsArena arena;
     GsObject prototype;
-    GsDynamic[string] storage;
+    Dict!(GsDynamic, string) storage;
     
-    public:
-    
-    this()
+    this(GsArena arena)
     {
+        this.arena = arena;
+        storage = dict!(GsDynamic, string);
     }
-
+    
+    ~this()
+    {
+        Delete(storage);
+    }
+    
     GsDynamic get(string key)
     {
         auto v = key in storage;
@@ -91,12 +98,13 @@ class GsGCObject: GsObject
                 return GsDynamic();
         }
     }
-
+    
     void set(string key, GsDynamic value)
     {
+        // TODO: copy key to the arena
         storage[key] = value;
     }
-
+    
     bool contains(string key)
     {
         if ((key in storage) !is null)
@@ -114,18 +122,6 @@ class GsGCObject: GsObject
     {
         prototype = proto;
     }
-    
-    /*
-    GsObject dup()
-    {
-        GsGCObject newObj = new GsGCObject();
-        foreach(key, value; storage)
-        {
-            newObj.set(key, value);
-        }
-        return newObj;
-    }
-    */
 }
 
 struct GsCallFrame
@@ -135,8 +131,11 @@ struct GsCallFrame
     size_t numParameters;
 }
 
+/*
 GsDynamic vmBuiltinRemove(GsDynamic[] args)
 {
+    GsVirtualMachine vm = cast(GsVirtualMachine)args[0].asObject;
+    
     if (args.length < 2)
         return args[0];
     
@@ -148,7 +147,7 @@ GsDynamic vmBuiltinRemove(GsDynamic[] args)
         return GsDynamic(arr);
     
     auto removeIndex = cast(size_t)args[1].asNumber;
-    auto newArr = new GsDynamic[arr.length - 1];
+    auto newArr = vm.heap.create!(GsDynamic[])(arr.length - 1);
     for (size_t i = 0; i < arr.length; i++)
     {
         if (i < removeIndex)
@@ -161,6 +160,8 @@ GsDynamic vmBuiltinRemove(GsDynamic[] args)
 
 GsDynamic vmBuiltinRemoveFront(GsDynamic[] args)
 {
+    GsVirtualMachine vm = cast(GsVirtualMachine)args[0].asObject;
+    
     if (args[0].type != GsDynamicType.Array)
         return args[0];
     
@@ -168,7 +169,7 @@ GsDynamic vmBuiltinRemoveFront(GsDynamic[] args)
     if (arr.length == 0)
         return GsDynamic(arr);
     
-    auto newArr = new GsDynamic[arr.length - 1];
+    auto newArr = vm.heap.create!(GsDynamic[])(arr.length - 1);
     for (size_t i = 1; i < arr.length; i++)
     {
         newArr[i - 1] = arr[i];
@@ -244,8 +245,9 @@ GsDynamic vmBuiltinSlice(GsDynamic[] args)
     else
         return GsDynamic(arr[sliceStartIndex..sliceEndIndex]);
 }
+*/
 
-class GsVirtualMachine: GsObject
+class GsVirtualMachine: Owner, GsObject
 {
   protected:
     GsDynamic[] stack;
@@ -256,10 +258,12 @@ class GsVirtualMachine: GsObject
     size_t sp;                     // Stack pointer
     size_t cp;                     // Call stack pointer
 
-    LabelMap jumpTable;            // Function table mapping names to instruction indices
-    GsDynamic[string] globals;     // Built-in variables
-    GsDynamic[string] builtins;    // Built-in methods
+    Dict!(size_t, string) jumpTable;  // Function table mapping names to instruction indices
     
+    Dict!(GsDynamic, string) globals; // Built-in variables
+    //GsDynamic[string] builtins;     // Built-in methods
+    
+    // Standard library
     GsGlobalStr globStr;
     GsGlobalIO globIO;
     GsGlobalTime globTime;
@@ -267,32 +271,50 @@ class GsVirtualMachine: GsObject
     size_t callDepth = 1;
     
   public:
+    GsArena heap;
 
-    this()
+    this(Owner owner)
     {
-        this.stack = new GsDynamic[256];        // Fixed stack size
-        this.callStack = new size_t[256];       // Fixed call stack size
-        this.callFrames = new GsCallFrame[256]; // Initialize empty call stack
-        this.ip = 0;
-        this.sp = 0;
-        this.cp = 0;
+        super(owner);
         
-        jumpTable = new LabelMap(1000000);
+        heap = New!GsArena(1024 * 10, this);
         
+        stack = New!(GsDynamic[])(256);
+        callStack = New!(size_t[])(256);
+        callFrames = New!(GsCallFrame[])(256);
+        ip = 0;
+        sp = 0;
+        cp = 0;
+        
+        jumpTable = dict!(size_t, string);
+        
+        globals = dict!(GsDynamic, string);
+        
+        /*
         builtins["remove"] = GsDynamic(&vmBuiltinRemove);
         builtins["removeFront"] = GsDynamic(&vmBuiltinRemoveFront);
         builtins["removeBack"] = GsDynamic(&vmBuiltinRemoveBack);
         builtins["insert"] = GsDynamic(&vmBuiltinInsert);
         builtins["slice"] = GsDynamic(&vmBuiltinSlice);
+        */
         
-        globStr = new GsGlobalStr();
+        globStr = heap.create!GsGlobalStr(heap);
         globals["string"] = GsDynamic(globStr);
         
-        globIO = new GsGlobalIO();
+        globIO = heap.create!GsGlobalIO(heap);
         globals["io"] = GsDynamic(globIO);
         
-        globTime = new GsGlobalTime();
+        globTime = heap.create!GsGlobalTime(heap);
         globals["time"] = GsDynamic(globTime);
+    }
+    
+    ~this()
+    {
+        Delete(stack);
+        Delete(callStack);
+        Delete(callFrames);
+        Delete(jumpTable);
+        Delete(globals);
     }
     
     GsDynamic get(string key)
@@ -318,25 +340,13 @@ class GsVirtualMachine: GsObject
     {
         // No-op
     }
-    
-    /*
-    GsObject dup()
-    {
-        GsGCObject newObj = new GsGCObject();
-        foreach(key, value; globals)
-        {
-            newObj.set(key, value);
-        }
-        return newObj;
-    }
-    */
 
     // Stack manipulation methods
     GsDynamic pop()
     {
         if (sp == 0)
         {
-            throw new Exception("Stack underflow");
+            fatality("Fatality: stack underflow");
         }
         return stack[--sp];
     }
@@ -345,7 +355,7 @@ class GsVirtualMachine: GsObject
     {
         if (sp == 0)
         {
-            throw new Exception("Stack is empty");
+            fatality("Fatality: stack is empty");
         }
         return stack[sp - 1];
     }
@@ -354,19 +364,19 @@ class GsVirtualMachine: GsObject
     {
         if (sp >= stack.length)
         {
-            throw new Exception("Stack overflow");
+            fatality("Fatality: stack overflow");
         }
         stack[sp++] = value;
     }
     
     GsObject createObject()
     {
-        return new GsGCObject();
+        return heap.create!GsArenaObject(heap);
     }
     
     GsDynamic[] createArray(size_t len)
     {
-        return new GsDynamic[len];
+        return heap.create!(GsDynamic[])(len);
     }
     
     bool hasLabel(string name)
@@ -395,10 +405,7 @@ class GsVirtualMachine: GsObject
 
     void load(GsInstruction[] instructions)
     {
-        if (instructions[$-1].type != GsInstructionType.HALT)
-            this.instructions = instructions ~ GsInstruction(GsInstructionType.HALT);
-        else
-            this.instructions = instructions;
+        this.instructions = instructions;
         
         // Populate the function table with label indices
         foreach(i, instrunction; instructions)
@@ -409,6 +416,12 @@ class GsVirtualMachine: GsObject
             }
         }
         
+        finalize();
+    }
+    
+    void fatality(A...)(string fmt, A args)
+    {
+        writefln(fmt, args);
         finalize();
     }
     
@@ -445,8 +458,7 @@ class GsVirtualMachine: GsObject
                         push(GsDynamic(a.asNumber + b.asNumber));
                     else
                     {
-                        writefln("Fatality: addition of %s and %s", a.type, b.type);
-                        finalize();
+                        fatality("Fatality: addition of %s and %s", a.type, b.type);
                         return;
                     }
                     break;
@@ -457,8 +469,7 @@ class GsVirtualMachine: GsObject
                         push(GsDynamic(a.asNumber - b.asNumber));
                     else
                     {
-                        writefln("Fatality: subtraction of %s and %s", a.type, b.type);
-                        finalize();
+                        fatality("Fatality: subtraction of %s and %s", a.type, b.type);
                         return;
                     }
                     break;
@@ -469,8 +480,7 @@ class GsVirtualMachine: GsObject
                         push(GsDynamic(a.asNumber * b.asNumber));
                     else
                     {
-                        writefln("Fatality: multiplication of %s and %s", a.type, b.type);
-                        finalize();
+                        fatality("Fatality: multiplication of %s and %s", a.type, b.type);
                         return;
                     }
                     break;
@@ -481,8 +491,7 @@ class GsVirtualMachine: GsObject
                         push(GsDynamic(a.asNumber / b.asNumber));
                     else
                     {
-                        writefln("Fatality: division of %s and %s", a.type, b.type);
-                        finalize();
+                        fatality("Fatality: division of %s and %s", a.type, b.type);
                         return;
                     }
                     break;
@@ -492,8 +501,7 @@ class GsVirtualMachine: GsObject
                         push(GsDynamic(-a.asNumber));
                     else
                     {
-                        writefln("Fatality: negation of %s", a.type);
-                        finalize();
+                        fatality("Fatality: negation of %s", a.type);
                         return;
                     }
                     break;
@@ -504,8 +512,7 @@ class GsVirtualMachine: GsObject
                         push(GsDynamic(a.asNumber % b.asNumber));
                     else
                     {
-                        writefln("Fatality: modulo of %s and %s", a.type, b.type);
-                        finalize();
+                        fatality("Fatality: modulo of %s and %s", a.type, b.type);
                         return;
                     }
                     break;
@@ -516,8 +523,7 @@ class GsVirtualMachine: GsObject
                         push(GsDynamic(a.asNumber ^^ b.asNumber));
                     else
                     {
-                        writefln("Fatality: power of %s and %s", a.type, b.type);
-                        finalize();
+                        fatality("Fatality: power of %s and %s", a.type, b.type);
                         return;
                     }
                     break;
@@ -528,8 +534,7 @@ class GsVirtualMachine: GsObject
                         push(GsDynamic(cast(long)a.asNumber & cast(long)b.asNumber));
                     else
                     {
-                        writefln("Fatality: bitwise AND of %s and %s", a.type, b.type);
-                        finalize();
+                        fatality("Fatality: bitwise AND of %s and %s", a.type, b.type);
                         return;
                     }
                     break;
@@ -540,8 +545,7 @@ class GsVirtualMachine: GsObject
                         push(GsDynamic(cast(long)a.asNumber | cast(long)b.asNumber));
                     else
                     {
-                        writefln("Fatality: bitwise OR of %s and %s", a.type, b.type);
-                        finalize();
+                        fatality("Fatality: bitwise OR of %s and %s", a.type, b.type);
                         return;
                     }
                     break;
@@ -552,8 +556,7 @@ class GsVirtualMachine: GsObject
                         push(GsDynamic(cast(long)a.asNumber ^ cast(long)b.asNumber));
                     else
                     {
-                        writefln("Fatality: bitwise XOR of %s and %s", a.type, b.type);
-                        finalize();
+                        fatality("Fatality: bitwise XOR of %s and %s", a.type, b.type);
                         return;
                     }
                     break;
@@ -564,8 +567,7 @@ class GsVirtualMachine: GsObject
                         push(GsDynamic(a.asNumber && b.asNumber));
                     else
                     {
-                        writefln("Fatality: logical AND of %s and %s", a.type, b.type);
-                        finalize();
+                        fatality("Fatality: logical AND of %s and %s", a.type, b.type);
                         return;
                     }
                     break;
@@ -576,8 +578,7 @@ class GsVirtualMachine: GsObject
                         push(GsDynamic(a.asNumber || b.asNumber));
                     else
                     {
-                        writefln("Fatality: logical OR of %s and %s", a.type, b.type);
-                        finalize();
+                        fatality("Fatality: logical OR of %s and %s", a.type, b.type);
                         return;
                     }
                     break;
@@ -587,22 +588,38 @@ class GsVirtualMachine: GsObject
                         push(GsDynamic(!a.asNumber));
                     else
                     {
-                        writefln("Fatality: logical NOT of %s", a.type);
-                        finalize();
+                        fatality("Fatality: logical NOT of %s", a.type);
                         return;
                     }
                     break;
                 case GsInstructionType.CAT:
                     auto b = pop();
                     auto a = pop();
-                    if (a.type == GsDynamicType.Array)
+                    if (a.type == GsDynamicType.String && b.type == GsDynamicType.String)
                     {
-                        auto arr = a.asArray;
-                        push(GsDynamic(arr ~ b));
+                        push(GsDynamic(heap.cat(a.toString(), b.toString())));
+                    }
+                    else if (a.type == GsDynamicType.Array && b.type == GsDynamicType.Array)
+                    {
+                        GsDynamic[] newArr = heap.cat(a.asArray, b.asArray);
+                        push(GsDynamic(newArr));
+                    }
+                    else if (a.type == GsDynamicType.Array && b.type != GsDynamicType.Array)
+                    {
+                        GsDynamic[] newArr = heap.cat(a.asArray, b);
+                        push(GsDynamic(newArr));
+                    }
+                    else if (a.type != GsDynamicType.Array && b.type == GsDynamicType.Array)
+                    {
+                        GsDynamic[] newArr = heap.cat(a, b.asArray);
+                        push(GsDynamic(newArr));
                     }
                     else
                     {
-                        push(GsDynamic(a.toString() ~ b.toString()));
+                        GsDynamic[] newArr = heap.create!(GsDynamic[])(2);
+                        newArr[0] = a;
+                        newArr[0] = b;
+                        push(GsDynamic(newArr));
                     }
                     break;
                 case GsInstructionType.EQ:
@@ -659,8 +676,7 @@ class GsVirtualMachine: GsObject
                         }
                         else
                         {
-                            writeln("Fatality: index is outside array capability");
-                            finalize();
+                            fatality("Fatality: index is outside array capability");
                             return;
                         }
                     }
@@ -674,15 +690,13 @@ class GsVirtualMachine: GsObject
                         }
                         else
                         {
-                            writeln("Fatality: index is outside string length");
-                            finalize();
+                            fatality("Fatality: index is outside string length");
                             return;
                         }
                     }
                     else
                     {
-                        writefln("Fatality: attempting to index %s which is not an array", arrayParam.type);
-                        finalize();
+                        fatality("Fatality: attempting to index %s which is not an array", arrayParam.type);
                         return;
                     }
                 case GsInstructionType.INDEX_SET:
@@ -696,8 +710,7 @@ class GsVirtualMachine: GsObject
                             array[index] = value;
                         else
                         {
-                            writeln("Fatality: index is outside array capability");
-                            finalize();
+                            fatality("Fatality: index is outside array capability");
                             return;
                         }
                         push(value);
@@ -705,8 +718,7 @@ class GsVirtualMachine: GsObject
                     }
                     else
                     {
-                        writefln("Fatality: attempting to index %s which is not an array", arrayParam.type);
-                        finalize();
+                        fatality("Fatality: attempting to index %s which is not an array", arrayParam.type);
                         return;
                     }
                 case GsInstructionType.LENGTH:
@@ -774,6 +786,7 @@ class GsVirtualMachine: GsObject
                                 
                                 break;
                             }
+                            /*
                             else if (funcName in builtins)
                             {
                                 auto nativeFunc = builtins[funcName];
@@ -795,17 +808,16 @@ class GsVirtualMachine: GsObject
                                     return;
                                 }
                             }
+                            */
                             else
                             {
-                                writefln("Fatality: undefined jump label \"%s\"", funcName);
-                                finalize();
+                                fatality("Fatality: undefined jump label \"%s\"", funcName);
                                 return;
                             }
                         }
                         else
                         {
-                            writefln("Fatality: attempting to call %s, which is not a function", func.type);
-                            finalize();
+                            fatality("Fatality: attempting to call %s, which is not a function", func.type);
                             return;
                         }
                     }
@@ -884,14 +896,12 @@ class GsVirtualMachine: GsObject
                     if (param.type == GsDynamicType.Object)
                     {
                         auto newObj = createObject();
-                        //newObj.set("__proto__", param);
                         newObj.setPrototype(param.asObject);
                         push(GsDynamic(newObj));
                     }
                     else
                     {
-                        writeln("Fatality: attempting to reuse non-object");
-                        finalize();
+                        fatality("Fatality: attempting to reuse non-object");
                         return;
                     }
                     break;
@@ -904,8 +914,7 @@ class GsVirtualMachine: GsObject
                     }
                     else
                     {
-                        writeln("Fatality: attempting to read member \"", key, "\" of non-object");
-                        finalize();
+                        fatality("Fatality: attempting to read member \"", key, "\" of non-object");
                         return;
                     }
                     break;
@@ -921,8 +930,7 @@ class GsVirtualMachine: GsObject
                     }
                     else
                     {
-                        writeln("Fatality: attempting to write member \"", key, "\" of non-object");
-                        finalize();
+                        fatality("Fatality: attempting to write member \"", key, "\" of non-object");
                         return;
                     }
                 case GsInstructionType.INIT_SET:
@@ -936,8 +944,7 @@ class GsVirtualMachine: GsObject
                     }
                     else
                     {
-                        writeln("Fatality: attempting to write member \"", key, "\" of non-object");
-                        finalize();
+                        fatality("Fatality: attempting to write member \"", key, "\" of non-object");
                         return;
                     }
                 case GsInstructionType.CONTAINS:
@@ -949,8 +956,7 @@ class GsVirtualMachine: GsObject
                     }
                     else
                     {
-                        writeln("Fatality: attempting to read member \"", key, "\" of non-object");
-                        finalize();
+                        fatality("Fatality: attempting to read member \"", key, "\" of non-object");
                         return;
                     }
                     break;
@@ -958,8 +964,7 @@ class GsVirtualMachine: GsObject
                     finalize();
                     return;
                 default:
-                    writeln("Fatality: unknown instruction: ", instruction.type);
-                    finalize();
+                    fatality("Fatality: unknown instruction: ", instruction.type);
                     return;
             }
         }

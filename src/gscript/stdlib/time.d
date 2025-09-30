@@ -30,13 +30,15 @@ module gscript.stdlib.time;
 import std.datetime: Clock, DateTime, SysTime, unixTimeToStdTime;
 import std.datetime.timezone: UTC;
 
+import gscript.arena;
 import gscript.dynamic;
 import gscript.vm;
 
-class GsGlobalTime: GsGCObject
+class GsGlobalTime: GsArenaObject
 {
-    this()
+    this(GsArena arena)
     {
+        super(arena);
         set("now", GsDynamic(&mNow));
         set("datetime", GsDynamic(&mDatetime));
     }
@@ -76,7 +78,7 @@ class GsGlobalTime: GsGCObject
             dt = st.toUTC();
         }
         
-        auto obj = new GsGCObject();
+        auto obj = arena.create!GsArenaObject(arena);
         obj.set("year",   GsDynamic(dt.year));
         obj.set("month",  GsDynamic(dt.month));
         obj.set("day",    GsDynamic(dt.day));

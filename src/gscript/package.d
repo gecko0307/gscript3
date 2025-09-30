@@ -29,6 +29,7 @@ module gscript;
 
 public
 {
+    import gscript.arena;
     import gscript.assembler;
     import gscript.codegen;
     import gscript.compiler;

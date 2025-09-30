@@ -65,7 +65,7 @@ class GsCodeGenerator
     ];
     
     string[] builtins = [
-        "remove", "removeFront", "removeBack", "insert", "slice"
+        //"remove", "removeFront", "removeBack", "insert", "slice"
     ];
     
     Scope globalScope;
@@ -606,6 +606,8 @@ class GsCodeGenerator
                 }
             }
         }
+        
+        output ~= GsInstruction(GsInstructionType.HALT);
         
         return output;
     }

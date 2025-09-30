@@ -31,13 +31,15 @@ import std.array;
 import std.ascii;
 import std.conv;
 
+import gscript.arena;
 import gscript.dynamic;
 import gscript.vm;
 
-class GsGlobalStr: GsGCObject
+class GsGlobalStr: GsArenaObject
 {
-    this()
+    this(GsArena arena)
     {
+        super(arena);
         set("format", GsDynamic(&mFormat));
     }
     
