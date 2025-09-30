@@ -176,6 +176,7 @@ void main(string[] args)
         vm["arr"] = arr;
         vm.load(instructions);
         vm.run();
+        Delete(vm);
     }
     
     if (saveCode)
