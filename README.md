@@ -8,6 +8,8 @@ Work-in-progress third iteration of GScript, a mini scripting language for D. Fu
 * [x] Codegen
 * [x] Bytecode serializer
 * [x] External state access
+* [x] Arena heap
+* [ ] VM builtins
 * [ ] Standard library
 
 ## Main Changes from GScript2
@@ -25,6 +27,7 @@ Work-in-progress third iteration of GScript, a mini scripting language for D. Fu
 
 Architecture improvements:
 - Fast VM with a more efficient ISA
+- Arena heap instead of the GC for internal allocations
 - Bytecode can now be serialized into a binary buffer, significantly speeding up the launch of compiled scripts
 - Tighter integration with the D object system. Any D object that inherits from `GsObject` and implements get/set semantics for its properties can be registered in the VM. This gives scripts secure access to the application's internal state.
 
