@@ -52,11 +52,16 @@ Binding native functions:
 ```
 GsDynamic printSum(GsDynamic[] args)
 {
+    // First argument is always VM itself (a `global` object)
     auto vm = cast(GsVirtualMachine)args[0].asObject;
+    
+    // Type checking is omitted for simplicity, but highly recommended
     auto a = args[1].asNumber;
     auto b = args[2].asNumber;
     writeln(a + b);
-    return GsDynamic(0);
+    
+    // Return `undefined` for void-like behaviour
+    return GsDynamic();
 }
 
 vm["printSum"] = &printSum;
