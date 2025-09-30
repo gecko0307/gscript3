@@ -156,7 +156,7 @@ class GsVirtualMachine: Owner, GsObject
   public:
     GsArena heap;
 
-    this(Owner owner)
+    this(Owner owner = null)
     {
         super(owner);
         

@@ -169,7 +169,7 @@ void main(string[] args)
         TestObj test = new TestObj();
         GsDynamic[] arr = [GsDynamic(0.0), GsDynamic(40.0), GsDynamic("Hello, World!"), GsDynamic(&printSum)];
 
-        auto vm = New!GsVirtualMachine(null);
+        auto vm = New!GsVirtualMachine();
         vm["foo"] = 100;
         vm["printSum"] = &printSum;
         vm["test"] = test;
