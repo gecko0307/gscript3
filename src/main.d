@@ -32,6 +32,7 @@ import std.conv;
 import std.file;
 import std.path;
 import std.datetime: SysTime;
+import std.getopt;
 
 import dlib.core.memory;
 
@@ -83,15 +84,6 @@ class TestObj: GsObject
     {
         // No-op
     }
-    
-    /*
-    GsObject dup()
-    {
-        TestObj newObj = new TestObj();
-        newObj.x = x;
-        return newObj;
-    }
-    */
 }
 
 GsDynamic printSum(GsDynamic[] args)
@@ -108,11 +100,20 @@ void main(string[] args)
 {
     GsInstruction[] instructions;
     bool saveCode = false;
+    bool compileOnly = false;
+    string inputFilename;
     
-    if (args.length < 2)
+    auto helpInformation = getopt(
+        args,
+        "compile|c", "Only compile script without running", &compileOnly,
+        "input|i", "Input file (.gs, .gsa, .gsc)", &inputFilename
+    );
+    
+    if (inputFilename.length == 0)
+    {
+        writeln("Usage: program [--compile] --input=<file>");
         return;
-    
-    string inputFilename = args[1];
+    }
     
     if (!exists(inputFilename))
     {
@@ -125,58 +126,57 @@ void main(string[] args)
     string bytecodeFilename = baseName(inputFilename, inputExtension) ~ ".gsc";
     string bytecodePath = buildPath(inputDirectory, bytecodeFilename);
     
-    if (args.length >= 2)
+    if (inputExtension == ".gsa")
     {
-        if (inputExtension == ".gsa")
-        {
-            string program = readText(inputFilename);
-            instructions = assemble(program);
-            saveCode = true;
-        }
-        else if (inputExtension == ".gsc")
-        {
-            ubyte[] code = cast(ubyte[])std.file.read(inputFilename);
-            instructions = loadBytecode(code);
-        }
-        else
-        {
-            bool needToCompile = true;
-            if (exists(bytecodePath))
-            {
-                if (timeLastModified(inputFilename, SysTime.min) < timeLastModified(bytecodePath, SysTime.min))
-                {
-                    ubyte[] code = cast(ubyte[])std.file.read(bytecodePath);
-                    instructions = loadBytecode(code);
-                    needToCompile = false;
-                }
-            }
-            
-            if (needToCompile)
-            {
-                string script = readText(inputFilename);
-                instructions = compile(script, inputFilename);
-                saveCode = true;
-            }
-        }
+        string program = readText(inputFilename);
+        instructions = assemble(program);
+        saveCode = true;
+    }
+    else if (inputExtension == ".gsc")
+    {
+        ubyte[] code = cast(ubyte[])std.file.read(inputFilename);
+        instructions = loadBytecode(code);
+        saveCode = false;
     }
     else
-        return;
+    {
+        bool needToCompile = true;
+        if (exists(bytecodePath))
+        {
+            if (timeLastModified(inputFilename, SysTime.min) < timeLastModified(bytecodePath, SysTime.min))
+            {
+                ubyte[] code = cast(ubyte[])std.file.read(bytecodePath);
+                instructions = loadBytecode(code);
+                needToCompile = false;
+            }
+        }
+        
+        if (needToCompile)
+        {
+            string script = readText(inputFilename);
+            instructions = compile(script, inputFilename);
+            saveCode = true;
+        }
+    }
 
     if (instructions.length == 0)
         return;
 
     debug writeln(instructions);
     
-    TestObj test = new TestObj();
-    GsDynamic[] arr = [GsDynamic(0.0), GsDynamic(40.0), GsDynamic("Hello, World!"), GsDynamic(&printSum)];
+    if (!compileOnly)
+    {
+        TestObj test = new TestObj();
+        GsDynamic[] arr = [GsDynamic(0.0), GsDynamic(40.0), GsDynamic("Hello, World!"), GsDynamic(&printSum)];
 
-    auto vm = New!GsVirtualMachine(null);
-    vm["foo"] = 100;
-    vm["printSum"] = &printSum;
-    vm["test"] = test;
-    vm["arr"] = arr;
-    vm.load(instructions);
-    vm.run();
+        auto vm = New!GsVirtualMachine(null);
+        vm["foo"] = 100;
+        vm["printSum"] = &printSum;
+        vm["test"] = test;
+        vm["arr"] = arr;
+        vm.load(instructions);
+        vm.run();
+    }
     
     if (saveCode)
     {

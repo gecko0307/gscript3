@@ -41,7 +41,6 @@ import dlib.container.dict;
 import gscript.arena;
 import gscript.instruction_set;
 import gscript.dynamic;
-import gscript.labelmap;
 import gscript.stdlib.array;
 import gscript.stdlib.str;
 import gscript.stdlib.io;

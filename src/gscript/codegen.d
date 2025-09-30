@@ -35,6 +35,7 @@ import std.algorithm;
 import gscript.parser;
 import gscript.instruction_set;
 import gscript.dynamic;
+import gscript.arena;
 
 class GsCodeGenerator
 {
