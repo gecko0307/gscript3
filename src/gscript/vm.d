@@ -42,6 +42,7 @@ import gscript.arena;
 import gscript.instruction_set;
 import gscript.dynamic;
 import gscript.labelmap;
+import gscript.stdlib.array;
 import gscript.stdlib.str;
 import gscript.stdlib.io;
 import gscript.stdlib.time;
@@ -101,7 +102,6 @@ class GsArenaObject: GsObject
     
     void set(string key, GsDynamic value)
     {
-        // TODO: copy key to the arena
         storage[key] = value;
     }
     
@@ -131,122 +131,6 @@ struct GsCallFrame
     size_t numParameters;
 }
 
-/*
-GsDynamic vmBuiltinRemove(GsDynamic[] args)
-{
-    GsVirtualMachine vm = cast(GsVirtualMachine)args[0].asObject;
-    
-    if (args.length < 2)
-        return args[0];
-    
-    if (args[0].type != GsDynamicType.Array)
-        return args[0];
-    
-    auto arr = args[0].asArray;
-    if (arr.length == 0)
-        return GsDynamic(arr);
-    
-    auto removeIndex = cast(size_t)args[1].asNumber;
-    auto newArr = vm.heap.create!(GsDynamic[])(arr.length - 1);
-    for (size_t i = 0; i < arr.length; i++)
-    {
-        if (i < removeIndex)
-            newArr[i] = arr[i];
-        else if (i > removeIndex)
-            newArr[i - 1] = arr[i];
-    }
-    return GsDynamic(newArr);
-}
-
-GsDynamic vmBuiltinRemoveFront(GsDynamic[] args)
-{
-    GsVirtualMachine vm = cast(GsVirtualMachine)args[0].asObject;
-    
-    if (args[0].type != GsDynamicType.Array)
-        return args[0];
-    
-    auto arr = args[0].asArray;
-    if (arr.length == 0)
-        return GsDynamic(arr);
-    
-    auto newArr = vm.heap.create!(GsDynamic[])(arr.length - 1);
-    for (size_t i = 1; i < arr.length; i++)
-    {
-        newArr[i - 1] = arr[i];
-    }
-    return GsDynamic(newArr);
-}
-
-GsDynamic vmBuiltinRemoveBack(GsDynamic[] args)
-{
-    if (args[0].type != GsDynamicType.Array)
-        return args[0];
-    
-    auto arr = args[0].asArray;
-    if (arr.length == 0)
-        return GsDynamic(arr);
-    
-    auto newArr = new GsDynamic[arr.length - 1];
-    for (size_t i = 0; i < newArr.length; i++)
-    {
-        newArr[i] = arr[i];
-    }
-    return GsDynamic(newArr);
-}
-
-GsDynamic vmBuiltinInsert(GsDynamic[] args)
-{
-    if (args.length < 3)
-        return args[0];
-    
-    if (args[0].type != GsDynamicType.Array)
-        return args[0];
-    
-    auto arr = args[0].asArray;
-    auto insertIndex = cast(size_t)args[1].asNumber;
-    if (insertIndex < 0)
-        return args[0];
-    
-    auto value = args[2];
-    
-    auto newArr = new GsDynamic[arr.length + 1];
-    for (size_t i = 0; i < newArr.length; i++)
-    {
-        if (i < insertIndex)
-            newArr[i] = arr[i];
-        else if (i == insertIndex)
-            newArr[i] = value;
-        else
-            newArr[i] = arr[i - 1];
-    }
-    return GsDynamic(newArr);
-}
-
-GsDynamic vmBuiltinSlice(GsDynamic[] args)
-{
-    if (args.length < 3)
-        return args[0];
-    
-    if (args[0].type != GsDynamicType.Array)
-        return args[0];
-    
-    auto arr = args[0].asArray;
-    
-    auto sliceStartIndex = cast(size_t)args[1].asNumber;
-    if (sliceStartIndex < 0 || sliceStartIndex >= arr.length)
-        return args[0];
-    
-    auto sliceEndIndex = cast(size_t)args[2].asNumber;
-    if (sliceEndIndex < sliceStartIndex || sliceEndIndex > arr.length)
-        return args[0];
-    
-    if (sliceEndIndex == sliceStartIndex)
-        return GsDynamic([]);
-    else
-        return GsDynamic(arr[sliceStartIndex..sliceEndIndex]);
-}
-*/
-
 class GsVirtualMachine: Owner, GsObject
 {
   protected:
@@ -261,9 +145,9 @@ class GsVirtualMachine: Owner, GsObject
     Dict!(size_t, string) jumpTable;  // Function table mapping names to instruction indices
     
     Dict!(GsDynamic, string) globals; // Built-in variables
-    //GsDynamic[string] builtins;     // Built-in methods
     
     // Standard library
+    GsGlobalArray globArray;
     GsGlobalStr globStr;
     GsGlobalIO globIO;
     GsGlobalTime globTime;
@@ -290,13 +174,8 @@ class GsVirtualMachine: Owner, GsObject
         
         globals = dict!(GsDynamic, string);
         
-        /*
-        builtins["remove"] = GsDynamic(&vmBuiltinRemove);
-        builtins["removeFront"] = GsDynamic(&vmBuiltinRemoveFront);
-        builtins["removeBack"] = GsDynamic(&vmBuiltinRemoveBack);
-        builtins["insert"] = GsDynamic(&vmBuiltinInsert);
-        builtins["slice"] = GsDynamic(&vmBuiltinSlice);
-        */
+        globArray = heap.create!GsGlobalArray(heap);
+        globals["array"] = GsDynamic(globArray);
         
         globStr = heap.create!GsGlobalStr(heap);
         globals["string"] = GsDynamic(globStr);
@@ -786,29 +665,6 @@ class GsVirtualMachine: Owner, GsObject
                                 
                                 break;
                             }
-                            /*
-                            else if (funcName in builtins)
-                            {
-                                auto nativeFunc = builtins[funcName];
-                                
-                                if (nativeFunc.type == GsDynamicType.NativeMethod)
-                                {
-                                    nativeMethod = nativeFunc.asNativeMethod;
-                                    useNativeMethod = true;
-                                }
-                                else if (nativeFunc.type == GsDynamicType.NativeFunction)
-                                {
-                                    nativeFuncPtr = nativeFunc.asNativeFunction;
-                                    useNativeFunc = true;
-                                }
-                                else
-                                {
-                                    writeln("Fatality: unsupported native call for function \"%s\"", funcName);
-                                    finalize();
-                                    return;
-                                }
-                            }
-                            */
                             else
                             {
                                 fatality("Fatality: undefined jump label \"%s\"", funcName);

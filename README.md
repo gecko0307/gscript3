@@ -9,7 +9,7 @@ Work-in-progress third iteration of GScript, a mini scripting language for D. Fu
 * [x] Bytecode serializer
 * [x] External state access
 * [x] Arena heap
-* [ ] VM builtins
+* [x] VM builtins
 * [ ] Standard library
 
 ## Main Changes from GScript2

@@ -65,7 +65,7 @@ class GsCodeGenerator
     ];
     
     string[] builtins = [
-        //"remove", "removeFront", "removeBack", "insert", "slice"
+        "remove", "removeFront", "removeBack", "insert", "slice"
     ];
     
     Scope globalScope;
@@ -367,13 +367,21 @@ class GsCodeGenerator
             case NodeType.MemberCallExpression:
                 size_t numParameters = node.children.length;
                 
+                if (builtins.canFind(node.value))
+                {
+                    instructions ~= GsInstruction(GsInstructionType.GLOBAL);
+                    numParameters++;
+                }
+                
                 foreach(child; node.children)
                         instructions ~= generate(child);
                 
                 if (builtins.canFind(node.value))
                 {
                     // Use builtin
-                    instructions ~= GsInstruction(GsInstructionType.PUSH, GsDynamic(node.value));
+                    instructions ~= GsInstruction(GsInstructionType.GLOBAL);
+                    instructions ~= GsInstruction(GsInstructionType.GET, GsDynamic("array"));
+                    instructions ~= GsInstruction(GsInstructionType.GET, GsDynamic(node.value));
                 }
                 else
                 {
