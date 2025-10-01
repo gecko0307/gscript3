@@ -94,8 +94,8 @@ class GsCodeGenerator
             // Function body
             instructions ~= generate(func.bodyBlock);
             
-            // Default return 0
-            instructions ~= GsInstruction(GsInstructionType.PUSH, GsDynamic(cast(double)0.0));
+            // Return undefined by default
+            instructions ~= GsInstruction(GsInstructionType.PUSH, GsDynamic());
             instructions ~= GsInstruction(GsInstructionType.RET);
         }
         else if (node.type == NodeType.Function)
@@ -320,6 +320,11 @@ class GsCodeGenerator
                 size_t numParameters = params.children.length;
                 instructions ~= generate(node.children[0]);
                 instructions ~= GsInstruction(GsInstructionType.SPAWN, GsDynamic(cast(double)numParameters));
+                break;
+            
+            case NodeType.AwaitExpression:
+                instructions ~= generate(node.children[0]);
+                instructions ~= GsInstruction(GsInstructionType.AWAIT);
                 break;
             
             case NodeType.LetStatement:
@@ -601,8 +606,8 @@ class GsCodeGenerator
                         return [];
                     }
                     
-                    // Default return 0
-                    output ~= GsInstruction(GsInstructionType.PUSH, GsDynamic(cast(double)0.0));
+                    // Return undefined by default
+                    output ~= GsInstruction(GsInstructionType.PUSH, GsDynamic());
                     output ~= GsInstruction(GsInstructionType.RET);
                 }
             }

@@ -69,6 +69,7 @@ enum NodeType
     ArgumentExpression,
     ArgumentsArrayExpression,
     SpawnExpression,
+    AwaitExpression,
     ParametersExpression
 }
 
@@ -874,6 +875,14 @@ class GsParser
             auto spawnExpr = new ASTNode(NodeType.SpawnExpression, "", [functionExpr, params]);
             spawnExpr.programScope = program.peekScope();
             return spawnExpr;
+        }
+        else if (currentToken.value == "await")
+        {
+            eat(GsTokenType.Keyword); // "await"
+            ASTNode threadExpr = parseExpression();
+            auto awaitExpr = new ASTNode(NodeType.AwaitExpression, "", [threadExpr]);
+            awaitExpr.programScope = program.peekScope();
+            return awaitExpr;
         }
         else if (currentToken.type == GsTokenType.Identifier)
         {

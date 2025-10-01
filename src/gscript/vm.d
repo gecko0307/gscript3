@@ -302,9 +302,16 @@ class GsVirtualMachine: Owner, GsObject
                 tr.callFrame = &tr.callFrames[tr.cp];
                 
                 if (tr.ip >= instructions.length)
+                {
                     tr.running = false;
+                    tr.waiting = false;
+                    continue;
+                }
                 
-                auto instruction = instructions[tr.ip++];
+                auto instruction = instructions[tr.ip];
+                
+                tr.ip++;
+                
                 switch (instruction.type)
                 {
                     case GsInstructionType.LABEL:
@@ -703,6 +710,7 @@ class GsVirtualMachine: Owner, GsObject
                         else
                         {
                             // Return from external call, halt execution
+                            tr.yieldValue = tr.pop();
                             tr.finalize();
                         }
                         break;
@@ -780,6 +788,7 @@ class GsVirtualMachine: Owner, GsObject
                             fatality("Fatality: attempting to write member \"", key, "\" of non-object");
                             return;
                         }
+                        break;
                     case GsInstructionType.INIT_SET:
                         auto key = instruction.operand.asString;
                         auto value = tr.pop();
@@ -794,6 +803,7 @@ class GsVirtualMachine: Owner, GsObject
                             fatality("Fatality: attempting to write member \"", key, "\" of non-object");
                             return;
                         }
+                        break;
                     case GsInstructionType.CONTAINS:
                         auto key = instruction.operand.asString;
                         auto param = tr.pop();
@@ -851,8 +861,41 @@ class GsVirtualMachine: Owner, GsObject
                             return;
                         }
                         break;
+                    case GsInstructionType.AWAIT:
+                        auto param = tr.peek();
+                        if (param.type == GsDynamicType.Object)
+                        {
+                            GsThread paramThread = cast(GsThread)param.asObject;
+                            if (paramThread)
+                            {
+                                if (!paramThread.running || paramThread.paused)
+                                {
+                                    tr.waiting = false;
+                                    tr.pop();
+                                    tr.push(paramThread.yieldValue);
+                                    if (paramThread.running)
+                                        paramThread.paused = false;
+                                }
+                                else
+                                {
+                                    tr.waiting = true;
+                                    tr.ip--;
+                                }
+                            }
+                            else
+                            {
+                                fatality("Fatality: attempting to await non-thread object", param.type);
+                                return;
+                            }
+                        }
+                        else
+                        {
+                            fatality("Fatality: attempting to await %s, which is not a thread", param.type);
+                            return;
+                        }
+                        break;
                     case GsInstructionType.HALT:
-                        tr.running = false;
+                        tr.finalize();
                         break;
                     default:
                         fatality("Fatality: unknown instruction: ", instruction.type);
@@ -884,6 +927,9 @@ class GsThread: Owner, GsObject
   public:
     GsCallFrame* callFrame;        // Current call frame
     bool running = false;
+    bool paused = true;
+    bool waiting = false;
+    GsDynamic yieldValue;
     GsThread next = null;          // Linked list of threads
     
     this(GsVirtualMachine vm)
@@ -900,6 +946,8 @@ class GsThread: Owner, GsObject
         ip = 0;
         sp = 0;
         cp = 0;
+        
+        yieldValue = GsDynamic();
     }
     
     ~this()
@@ -957,10 +1005,24 @@ class GsThread: Owner, GsObject
         stack[sp++] = value;
     }
     
+    void pause()
+    {
+        if (running)
+            paused = true;
+    }
+    
+    void resume()
+    {
+        if (running)
+            paused = false;
+    }
+    
     void finalize()
     {
         ip = vm.instructions.length - 1;
         running = false;
+        paused = true;
+        waiting = false;
         data.set("running", GsDynamic(0.0));
     }
     
@@ -971,6 +1033,9 @@ class GsThread: Owner, GsObject
         cp = 0;
         callDepth = initialCallDepth;
         running = true;
+        paused = false;
+        waiting = false;
         data.set("running", GsDynamic(1.0));
+        yieldValue = GsDynamic();
     }
 }

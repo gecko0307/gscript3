@@ -6,14 +6,11 @@ const thread = spawn func(self, init)
         print self.i;
         self.i += 1;
     }
+    
+    return self.i;
 }(5);
 
 print "Thread started, waiting...";
 
-while(thread.running)
-{
-    // busy-wait
-}
-
-print "Thread terminated";
-print thread.i;
+const v = await thread;
+print v;
