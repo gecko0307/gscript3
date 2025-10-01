@@ -1,5 +1,16 @@
+func test(self)
+{
+    let i = 0;
+    while(i < 100)
+    {
+        i += 1;
+    }
+}
+
 const thread = spawn func(self)
 {
+    spawn test;
+    
     self.i = 0;
     while(self.i < 10)
     {

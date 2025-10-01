@@ -748,11 +748,11 @@ class GsVirtualMachine: Owner, GsObject
                         break;
                     case GsInstructionType.GLOBAL_STORE_VAR:
                         size_t vIndex = cast(size_t)instruction.operand.asNumber;
-                        tr.callFrames[0].localVariables[vIndex] = tr.peek(); // Store a value into a global variable
+                        mainThread.callFrames[0].localVariables[vIndex] = tr.peek(); // Store a value into a global variable
                         break;
                     case GsInstructionType.GLOBAL_LOAD_VAR:
                         size_t vIndex = cast(size_t)instruction.operand.asNumber;
-                        tr.push(tr.callFrames[0].localVariables[vIndex]); // Load a global variable onto the stack
+                        tr.push(mainThread.callFrames[0].localVariables[vIndex]); // Load a global variable onto the stack
                         break;
                     case GsInstructionType.NEW:
                         auto obj = createObject();
