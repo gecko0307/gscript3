@@ -36,12 +36,7 @@ import std.getopt;
 
 import dlib.core.memory;
 
-import gscript.instruction_set;
-import gscript.vm;
-import gscript.assembler;
-import gscript.serializer;
-import gscript.compiler;
-import gscript.dynamic;
+import gscript;
 
 class TestObj: GsObject
 {

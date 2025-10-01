@@ -33,7 +33,7 @@ import std.conv;
 import std.algorithm;
 
 import gscript.parser;
-import gscript.instruction_set;
+import gscript.instructions;
 import gscript.dynamic;
 import gscript.arena;
 
@@ -314,8 +314,11 @@ class GsCodeGenerator
                 break;
             
             case NodeType.SpawnExpression:
+                auto params = node.children[1];
+                foreach(child; params.children)
+                    instructions ~= generate(child);
+                size_t numParameters = params.children.length;
                 instructions ~= generate(node.children[0]);
-                size_t numParameters = 0; // TODO: support parameters
                 instructions ~= GsInstruction(GsInstructionType.SPAWN, GsDynamic(cast(double)numParameters));
                 break;
             

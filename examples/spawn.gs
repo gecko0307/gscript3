@@ -1,23 +1,12 @@
-func test(self)
+const thread = spawn func(self, init)
 {
-    let i = 0;
-    while(i < 100)
-    {
-        i += 1;
-    }
-}
-
-const thread = spawn func(self)
-{
-    spawn test;
-    
-    self.i = 0;
+    self.i = init;
     while(self.i < 10)
     {
         print self.i;
         self.i += 1;
     }
-};
+}(5);
 
 print "Thread started, waiting...";
 

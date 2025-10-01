@@ -40,7 +40,7 @@ import dlib.container.array;
 import dlib.container.dict;
 
 import gscript.arena;
-import gscript.instruction_set;
+import gscript.instructions;
 import gscript.dynamic;
 import gscript.stdlib.array;
 import gscript.stdlib.str;
@@ -247,26 +247,6 @@ class GsVirtualMachine: Owner, GsObject
         else
         {
             writeln("Error: unknown jump label \"", jumpLabel, "\"");
-        }
-    }
-    
-    void spawnThread(GsThread thread, string jumpLabel, GsDynamic[] args)
-    {
-        if (jumpLabel in jumpTable)
-        {
-            auto callFrame = &thread.callFrames[0];
-            callFrame.parameters[0] = GsDynamic(thread);
-            for(size_t i = 1; i < args.length; i++)
-            {
-                callFrame.parameters[i] = args[i];
-            }
-            callFrame.numParameters = args.length + 1;
-            thread.start(jumpTable[jumpLabel], 0);
-        }
-        else
-        {
-            writeln("Error: unknown jump label \"", jumpLabel, "\"");
-            thread.finalize();
         }
     }
     
@@ -828,18 +808,42 @@ class GsVirtualMachine: Owner, GsObject
                         }
                         break;
                     case GsInstructionType.SPAWN:
+                        size_t numParams = cast(size_t)instruction.operand.asNumber;
                         auto func = tr.pop();
                         if (func.type == GsDynamicType.String)
                         {
-                            GsThread newThread = New!GsThread(this);
-                            threads.append(newThread);
-                            // Add to linked list
-                            if (tr.next)
-                                newThread.next = tr.next;
-                            tr.next = newThread;
-                            // TODO: arguments
-                            spawnThread(newThread, func.asString, []);
-                            tr.push(GsDynamic(newThread));
+                            string jumpLabel = func.asString;
+                            if (jumpLabel in jumpTable)
+                            {
+                                GsThread newThread = New!GsThread(this);
+                                threads.append(newThread);
+                                
+                                // Add to linked list
+                                if (tr.next)
+                                    newThread.next = tr.next;
+                                tr.next = newThread;
+                                
+                                auto cf = &newThread.callFrames[0];
+                                cf.parameters[0] = GsDynamic(newThread);
+                                for(size_t i = 0; i < numParams; i++)
+                                {
+                                    cf.parameters[1 + numParams - 1 - i] = tr.pop();
+                                }
+                                for(size_t pi = numParams + 1; pi < cf.parameters.length; pi++)
+                                {
+                                    cf.parameters[pi] = GsDynamic();
+                                }
+                                cf.numParameters = numParams + 1;
+                                
+                                newThread.start(jumpTable[jumpLabel], 0);
+                                
+                                tr.push(GsDynamic(newThread));
+                            }
+                            else
+                            {
+                                fatality("Fatality: unknown jump label %s", jumpLabel);
+                                return;
+                            }
                         }
                         else
                         {

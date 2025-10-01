@@ -30,7 +30,7 @@ module gscript.serializer;
 import std.conv;
 import std.utf;
 
-import gscript.instruction_set;
+import gscript.instructions;
 import gscript.dynamic;
 
 enum GSIR_MAGIC = "GSIR";

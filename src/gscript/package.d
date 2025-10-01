@@ -34,7 +34,7 @@ public
     import gscript.codegen;
     import gscript.compiler;
     import gscript.dynamic;
-    import gscript.instruction_set;
+    import gscript.instructions;
     import gscript.labelmap;
     import gscript.lexer;
     import gscript.parser;

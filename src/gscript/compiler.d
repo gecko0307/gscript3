@@ -34,7 +34,7 @@ import std.path;
 import gscript.lexer;
 import gscript.parser;
 import gscript.codegen;
-import gscript.instruction_set;
+import gscript.instructions;
 
 bool parseModule(GsProgram program, GsModule modul, string script, string filename, string importDirectory)
 {

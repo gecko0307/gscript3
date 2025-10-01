@@ -33,7 +33,7 @@ import std.algorithm;
 import std.array;
 import std.string;
 
-import gscript.instruction_set;
+import gscript.instructions;
 import gscript.dynamic;
 
 class GsAssembler

@@ -68,7 +68,8 @@ enum NodeType
     NewExpression,
     ArgumentExpression,
     ArgumentsArrayExpression,
-    SpawnExpression
+    SpawnExpression,
+    ParametersExpression
 }
 
 immutable string[] assignOperators = [
@@ -863,8 +864,14 @@ class GsParser
         else if (currentToken.value == "spawn")
         {
             eat(GsTokenType.Keyword); // "spawn"
+            ASTNode params = new ASTNode(NodeType.ParametersExpression, "");
+            params.programScope = program.peekScope();
             ASTNode functionExpr = parseExpression();
-            auto spawnExpr = new ASTNode(NodeType.SpawnExpression, "", [functionExpr]);
+            if (currentToken.type == GsTokenType.OpeningBracket)
+            {
+                parseList(params);
+            }
+            auto spawnExpr = new ASTNode(NodeType.SpawnExpression, "", [functionExpr, params]);
             spawnExpr.programScope = program.peekScope();
             return spawnExpr;
         }
