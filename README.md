@@ -241,7 +241,7 @@ func test
 test(5, 10, 20);
 ```
 
-### Threads
+## Threads
 
 ```
 const thread = spawn func(self)
