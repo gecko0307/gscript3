@@ -83,7 +83,8 @@ enum GsInstructionType: ubyte
     REUSE = 46,        // REUSE              - pop an object, create a derived object and push it onto the stack
     LOAD_ARGS = 47,    // LOAD_ARGS          - push all available arguments as an array slice onto the stack
     SPAWN = 48,        // SPAWN N            - pop a subroutine name and spawn a new thread that runs this subroutine
-    AWAIT = 49         // AWAIT
+    AWAIT = 49,        // AWAIT              - pop a thread object and wait until it yields or terminates
+    YIELD = 50         // YIELD              
 }
 
 enum GsOperandType: ubyte

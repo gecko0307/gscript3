@@ -1,16 +1,22 @@
 const thread = spawn func(self, init)
 {
     self.i = init;
-    while(self.i < 10)
-    {
-        print self.i;
-        self.i += 1;
-    }
     
+    self.i += 1;
+    yield self.i;
+    
+    self.i += 2;
+    yield self.i;
+    
+    self.i += 3;
     return self.i;
 }(5);
 
-print "Thread started, waiting...";
+print "Thread started, awaiting for results...";
 
-const v = await thread;
-print v;
+while(thread.running)
+{
+    print await thread;
+}
+
+print "Thread terminated";

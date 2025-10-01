@@ -349,6 +349,11 @@ class GsCodeGenerator
                 instructions ~= GsInstruction(GsInstructionType.RET);
                 break;
             
+            case NodeType.YieldStatement:
+                instructions ~= generate(node.children[0]);
+                instructions ~= GsInstruction(GsInstructionType.YIELD);
+                break;
+            
             case NodeType.PrintStatement:
                 instructions ~= generate(node.children[0]);
                 instructions ~= GsInstruction(GsInstructionType.PRINT);

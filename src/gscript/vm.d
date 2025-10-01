@@ -231,7 +231,7 @@ class GsVirtualMachine: Owner, GsObject
         return (name in jumpTable) != null;
     }
     
-    void call(string jumpLabel, GsDynamic[] args)
+    GsDynamic call(string jumpLabel, GsDynamic[] args)
     {
         if (jumpLabel in jumpTable)
         {
@@ -243,10 +243,12 @@ class GsVirtualMachine: Owner, GsObject
             callFrame.numParameters = args.length;
             mainThread.callDepth = 0;
             run(jumpTable[jumpLabel], 0);
+            return mainThread.yieldValue;
         }
         else
         {
             writeln("Error: unknown jump label \"", jumpLabel, "\"");
+            return GsDynamic();
         }
     }
     
@@ -714,6 +716,22 @@ class GsVirtualMachine: Owner, GsObject
                             tr.finalize();
                         }
                         break;
+                    case GsInstructionType.YIELD:
+                        if (tr.callDepth > 0)
+                        {
+                            // Same as return
+                            tr.cp--;
+                            tr.ip = tr.callStack[tr.cp]; // Pop the return address from the call stack
+                            tr.callFrame = &tr.callFrames[tr.cp];
+                            tr.callDepth--;
+                        }
+                        else
+                        {
+                            // Yield a value and pause the thread
+                            tr.yieldValue = tr.pop();
+                            tr.pause();
+                        }
+                        break;
                     case GsInstructionType.STORE_VAR:
                         size_t vIndex = cast(size_t)instruction.operand.asNumber;
                         tr.callFrames[tr.cp].localVariables[vIndex] = tr.peek(); // Store a value into a local variable
@@ -929,7 +947,7 @@ class GsThread: Owner, GsObject
     bool running = false;
     bool paused = true;
     bool waiting = false;
-    GsDynamic yieldValue;
+    GsDynamic yieldValue;          //
     GsThread next = null;          // Linked list of threads
     
     this(GsVirtualMachine vm)

@@ -51,6 +51,7 @@ enum NodeType
     ConstStatement,
     ExpressionStatement,
     ReturnStatement,
+    YieldStatement,
     PrintStatement,
     IfStatement,
     WhileStatement,
@@ -1150,6 +1151,15 @@ class GsParser
             ASTNode returnExpr = parseExpression();
             eat(GsTokenType.Semicolon); // ";"
             auto stat = new ASTNode(NodeType.ReturnStatement, "", [returnExpr]);
+            stat.programScope = program.peekScope();
+            return stat;
+        }
+        else if (currentToken.value == "yield")
+        {
+            eat(GsTokenType.Keyword); // "yield"
+            ASTNode returnExpr = parseExpression();
+            eat(GsTokenType.Semicolon); // ";"
+            auto stat = new ASTNode(NodeType.YieldStatement, "", [returnExpr]);
             stat.programScope = program.peekScope();
             return stat;
         }
