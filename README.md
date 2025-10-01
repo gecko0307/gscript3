@@ -305,7 +305,7 @@ const thread = spawn func(self, init)
 while(thread.running)
 {
     print sync thread;
-    thread.i = 0; // do something while synchronized
+    thread.i = 0; // modify thread's state while synchronized
     thread.resume();
 }
 ```
