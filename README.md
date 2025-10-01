@@ -11,7 +11,7 @@ Work-in-progress third iteration of GScript, a mini scripting language for D. Fu
 * [x] Arena heap
 * [x] VM builtins
 * [x] Green threads
-* [ ] Coroutines
+* [x] Coroutines
 * [ ] Standard library
 
 ## Main Changes from GScript2
@@ -254,13 +254,58 @@ const thread = spawn func(self)
     }
 };
 
-print "Thread started, waiting...";
-
 while(thread.running)
 {
     // busy-wait
 }
 
-print "Thread terminated";
 print thread.i;
+```
+
+## Coroutines
+
+```
+const thread = spawn func(self, init)
+{
+    self.i = init;
+    
+    self.i += 1;
+    yield self.i;
+    
+    self.i += 2;
+    yield self.i;
+    
+    self.i += 3;
+    return self.i;
+}(5);
+
+while(thread.running)
+{
+    print await thread; // prints yield values
+}
+```
+
+Alternatively, `sync` can be used instead of `await` to pause execution and synchronize state:
+
+```
+const thread = spawn func(self, init)
+{
+    self.i = init;
+    
+    self.i += 1;
+    yield self.i;
+    
+    self.i += 2;
+    yield self.i;
+    
+    self.i += 3;
+    return self.i;
+}(5);
+
+while(thread.running)
+{
+    print sync thread;
+    thread.i = 0; // do something while synchronized
+    thread.resume();
+}
 ```

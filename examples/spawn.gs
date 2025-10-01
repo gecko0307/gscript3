@@ -12,12 +12,9 @@ const thread = spawn func(self, init)
     return self.i;
 }(5);
 
-print "Thread started, awaiting for results...";
-
 while(thread.running)
 {
     print sync thread;
-    thread.resume();
+    thread.i = 0; // do something while synchronized
+    thread.resume(); // resume execution
 }
-
-print "Thread terminated";
