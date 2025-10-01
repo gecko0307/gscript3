@@ -67,7 +67,8 @@ enum NodeType
     KeyValueExpression,
     NewExpression,
     ArgumentExpression,
-    ArgumentsArrayExpression
+    ArgumentsArrayExpression,
+    SpawnExpression
 }
 
 immutable string[] assignOperators = [
@@ -858,6 +859,14 @@ class GsParser
             func.isVariadic = isVariadic;
             func.programScope = program.peekScope();
             return func;
+        }
+        else if (currentToken.value == "spawn")
+        {
+            eat(GsTokenType.Keyword); // "spawn"
+            ASTNode functionExpr = parseExpression();
+            auto spawnExpr = new ASTNode(NodeType.SpawnExpression, "", [functionExpr]);
+            spawnExpr.programScope = program.peekScope();
+            return spawnExpr;
         }
         else if (currentToken.type == GsTokenType.Identifier)
         {

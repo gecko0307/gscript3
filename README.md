@@ -10,7 +10,8 @@ Work-in-progress third iteration of GScript, a mini scripting language for D. Fu
 * [x] External state access
 * [x] Arena heap
 * [x] VM builtins
-* [ ] Green threads / coroutines
+* [x] Green threads
+* [ ] Coroutines
 * [ ] Standard library
 
 ## Main Changes from GScript2

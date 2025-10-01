@@ -283,7 +283,6 @@ class GsCodeGenerator
                 break;
             
             case NodeType.FunctionCallExpression:
-                // TODO: qualified name
                 string funcName = node.value;
                 size_t numParameters = node.children.length;
                 foreach(child; node.children)
@@ -312,6 +311,12 @@ class GsCodeGenerator
                     instructions ~= GsInstruction(GsInstructionType.PUSH, GsDynamic(funcName));
                 }
                 instructions ~= GsInstruction(GsInstructionType.CALL, GsDynamic(cast(double)numParameters));
+                break;
+            
+            case NodeType.SpawnExpression:
+                instructions ~= generate(node.children[0]);
+                size_t numParameters = 0; // TODO: support parameters
+                instructions ~= GsInstruction(GsInstructionType.SPAWN, GsDynamic(cast(double)numParameters));
                 break;
             
             case NodeType.LetStatement:
@@ -375,7 +380,7 @@ class GsCodeGenerator
                 }
                 
                 foreach(child; node.children)
-                        instructions ~= generate(child);
+                    instructions ~= generate(child);
                 
                 if (builtins.canFind(node.value))
                 {
