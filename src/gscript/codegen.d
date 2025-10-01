@@ -327,6 +327,11 @@ class GsCodeGenerator
                 instructions ~= GsInstruction(GsInstructionType.AWAIT);
                 break;
             
+            case NodeType.SyncExpression:
+                instructions ~= generate(node.children[0]);
+                instructions ~= GsInstruction(GsInstructionType.SYNC);
+                break;
+            
             case NodeType.LetStatement:
                 string varName = node.value;
                 node.programScope.defineVariable(varName);

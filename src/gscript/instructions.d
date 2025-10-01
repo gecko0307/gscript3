@@ -84,7 +84,8 @@ enum GsInstructionType: ubyte
     LOAD_ARGS = 47,    // LOAD_ARGS          - push all available arguments as an array slice onto the stack
     SPAWN = 48,        // SPAWN N            - pop a subroutine name and spawn a new thread that runs this subroutine
     AWAIT = 49,        // AWAIT              - pop a thread object and wait until it yields or terminates
-    YIELD = 50         // YIELD              
+    SYNC = 50,         // SYNC               
+    YIELD = 51         // YIELD              
 }
 
 enum GsOperandType: ubyte

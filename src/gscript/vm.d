@@ -293,7 +293,7 @@ class GsVirtualMachine: Owner, GsObject
             
             while(tr !is null)
             {
-                if (!tr.running)
+                if (!tr.running || tr.paused)
                 {
                     tr = tr.next;
                     continue;
@@ -912,6 +912,37 @@ class GsVirtualMachine: Owner, GsObject
                             return;
                         }
                         break;
+                    case GsInstructionType.SYNC:
+                        auto param = tr.peek();
+                        if (param.type == GsDynamicType.Object)
+                        {
+                            GsThread paramThread = cast(GsThread)param.asObject;
+                            if (paramThread)
+                            {
+                                if (!paramThread.running || paramThread.paused)
+                                {
+                                    tr.waiting = false;
+                                    tr.pop();
+                                    tr.push(paramThread.yieldValue);
+                                }
+                                else
+                                {
+                                    tr.waiting = true;
+                                    tr.ip--;
+                                }
+                            }
+                            else
+                            {
+                                fatality("Fatality: attempting to sync non-thread object", param.type);
+                                return;
+                            }
+                        }
+                        else
+                        {
+                            fatality("Fatality: attempting to sync %s, which is not a thread", param.type);
+                            return;
+                        }
+                        break;
                     case GsInstructionType.HALT:
                         tr.finalize();
                         break;
@@ -957,6 +988,8 @@ class GsThread: Owner, GsObject
         this.vm = vm;
         
         data = vm.createObject();
+        data.set("pause", GsDynamic(&bindPause));
+        data.set("resume", GsDynamic(&bindResume));
         
         stack = New!(GsDynamic[])(256);
         callStack = New!(size_t[])(256);
@@ -1033,6 +1066,20 @@ class GsThread: Owner, GsObject
     {
         if (running)
             paused = false;
+    }
+    
+    GsDynamic bindPause(GsDynamic[] args)
+    {
+        if (running)
+            paused = true;
+        return GsDynamic();
+    }
+    
+    GsDynamic bindResume(GsDynamic[] args)
+    {
+        if (running)
+            paused = false;
+        return GsDynamic();
     }
     
     void finalize()

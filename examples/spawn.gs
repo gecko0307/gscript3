@@ -16,7 +16,8 @@ print "Thread started, awaiting for results...";
 
 while(thread.running)
 {
-    print await thread;
+    print sync thread;
+    thread.resume();
 }
 
 print "Thread terminated";
