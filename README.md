@@ -11,7 +11,7 @@ Work-in-progress third iteration of GScript, a mini scripting language for D. Fu
 * [x] Arena heap
 * [x] VM builtins
 * [x] Green threads + coroutines
-* [ ] Releasing and reusing terminated threads
+* [x] Releasing and reusing terminated threads
 * [ ] Standard library
 
 ## Main Changes from GScript2
