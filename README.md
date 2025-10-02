@@ -283,7 +283,7 @@ while(thread.running)
 }
 ```
 
-Alternatively, `sync` can be used instead of `await` to pause execution and synchronize state. In such case, `thread.resume()` should be called afterwards:
+`await` doesn't pause the thread on `yield`. Alternatively, `sync` can be used instead to pause execution and synchronize state. In such case, `thread.resume()` should be called afterwards:
 
 ```
 const thread = spawn(null, 5) func(self, init)
