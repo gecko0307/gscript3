@@ -21,8 +21,8 @@ Work-in-progress third iteration of GScript, a mini scripting language for D. Fu
 - JS-like object literals istead of prototype functions; see below
 - Prototype inheritance instead of shallow-copy; see below
 - New module system; see below
-- A new, more efficient variadic arguments system; see below
-- No explicit referencing. Function reference is passed without `ref` keyword
+- New variadic arguments system; see below
+- Implicit function referencing. Function reference is created without `ref` keyword
 - Array length is now returned by the built-in `length` property instead of a global `length` function
 - `print` instead of `writeln`
 - Spawning functions as threads/coroutines; see below.
