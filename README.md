@@ -29,7 +29,7 @@ Work-in-progress third iteration of GScript, a mini scripting language for D. Fu
 
 Architecture improvements:
 - Fast VM with a more efficient ISA
-- VM-level preemptive multithreading ("green threads"). Threads are first-class objects integrated into the prototype model
+- VM-level preemptive multithreading ("green threads"). Threads are first-class citizens integrated into the prototype inheritance model
 - Arena heap instead of the GC for internal allocations. VM is fully GC-free (compiler is not yet)
 - Bytecode can now be serialized into a binary buffer, significantly speeding up the launch of compiled scripts
 - Tighter integration with the D object system. Any D object that inherits from `GsObject` and implements get/set semantics for its properties can be registered in the VM. This gives scripts secure access to the application's internal state.
