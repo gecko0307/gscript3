@@ -36,6 +36,7 @@ import gscript.lexer;
 
 enum NodeType
 {
+    NullLiteral,
     NumberLiteral,
     StringLiteral,
     BooleanLiteral,
@@ -817,6 +818,12 @@ class GsParser
                 return null;
             }
         }
+        else if (currentToken.value == "null")
+        {
+            eat(GsTokenType.Keyword); // "null"
+            auto node = new ASTNode(NodeType.NullLiteral, "");
+            return node;
+        }
         else if (currentToken.value == "new")
         {
             eat(GsTokenType.Keyword); // "new"
@@ -1142,7 +1149,7 @@ class GsParser
             {
                 // Implicit initialization
                 ASTNode left = expr;
-                ASTNode right = new ASTNode(NodeType.NumberLiteral, "0");
+                ASTNode right = new ASTNode(NodeType.NullLiteral, "");
                 right.programScope = program.peekScope();
                 expr = new ASTNode(NodeType.AssignExpression, "=", [left, right]);
                 expr.programScope = program.peekScope();

@@ -24,4 +24,4 @@ while(thread.running)
     thread.resume(); // resume execution
 }
 
-print obj.foo;
+print obj.foo; // "test"

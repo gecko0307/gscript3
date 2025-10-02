@@ -843,14 +843,19 @@ class GsVirtualMachine: Owner, GsObject
                             string jumpLabel = func.asString;
                             if (jumpLabel in jumpTable)
                             {
-                                auto payload = tr.pop();
-                                if (payload.type != GsDynamicType.Object)
+                                auto payloadParam = tr.pop();
+                                GsObject payload = null;
+                                if (payloadParam.type == GsDynamicType.Object)
                                 {
-                                    fatality("Fatality: attempting to payload a thread with %s, which is not an object", payload.type);
+                                    payload = payloadParam.asObject;
+                                }
+                                else if (payloadParam.type != GsDynamicType.Undefined)
+                                {
+                                    fatality("Fatality: attempting to payload a thread with %s, which is not an object", payloadParam.type);
                                     return;
                                 }
                                 
-                                GsThread newThread = New!GsThread(this, payload.asObject);
+                                GsThread newThread = New!GsThread(this, payload);
                                 threads.append(newThread);
                                 
                                 // Add to linked list

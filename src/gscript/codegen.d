@@ -125,6 +125,10 @@ class GsCodeGenerator
         
         switch(node.type)
         {
+            case NodeType.NullLiteral:
+                instructions ~= GsInstruction(GsInstructionType.PUSH, GsDynamic());
+                break;
+            
             case NodeType.NumberLiteral:
                 instructions ~= GsInstruction(GsInstructionType.PUSH, GsDynamic(node.value.to!double));
                 break;
