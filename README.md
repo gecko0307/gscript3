@@ -283,7 +283,7 @@ while(thread.running)
 }
 ```
 
-Alternatively, `sync` can be used instead of `await` to pause execution and synchronize state:
+Alternatively, `sync` can be used instead of `await` to pause execution and synchronize state. In such case, `thread.resume()` should be called afterwards:
 
 ```
 const thread = spawn(null, 5) func(self, init)
