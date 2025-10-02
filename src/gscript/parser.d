@@ -867,14 +867,14 @@ class GsParser
         else if (currentToken.value == "spawn")
         {
             eat(GsTokenType.Keyword); // "spawn"
-            ASTNode params = new ASTNode(NodeType.ParametersExpression, "");
-            params.programScope = program.peekScope();
-            ASTNode functionExpr = parseExpression();
+            ASTNode spawnParams = new ASTNode(NodeType.ParametersExpression, "");
+            spawnParams.programScope = program.peekScope();
             if (currentToken.type == GsTokenType.OpeningBracket)
             {
-                parseList(params);
+                parseList(spawnParams);
             }
-            auto spawnExpr = new ASTNode(NodeType.SpawnExpression, "", [functionExpr, params]);
+            ASTNode functionExpr = parseExpression();
+            auto spawnExpr = new ASTNode(NodeType.SpawnExpression, "", [functionExpr, spawnParams]);
             spawnExpr.programScope = program.peekScope();
             return spawnExpr;
         }

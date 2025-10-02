@@ -843,7 +843,14 @@ class GsVirtualMachine: Owner, GsObject
                             string jumpLabel = func.asString;
                             if (jumpLabel in jumpTable)
                             {
-                                GsThread newThread = New!GsThread(this);
+                                auto payload = tr.pop();
+                                if (payload.type != GsDynamicType.Object)
+                                {
+                                    fatality("Fatality: attempting to payload a thread with %s, which is not an object", payload.type);
+                                    return;
+                                }
+                                
+                                GsThread newThread = New!GsThread(this, payload.asObject);
                                 threads.append(newThread);
                                 
                                 // Add to linked list
@@ -964,7 +971,7 @@ class GsThread: Owner, GsObject
 {
   protected:
     GsVirtualMachine vm;
-    GsObject data;
+    GsObject payload;
     GsDynamic[] stack;
     size_t[] callStack;            // Call stack for subroutine return addresses
     GsCallFrame[] callFrames;      // Stack of call frames
@@ -981,15 +988,18 @@ class GsThread: Owner, GsObject
     GsDynamic yieldValue;          //
     GsThread next = null;          // Linked list of threads
     
-    this(GsVirtualMachine vm)
+    this(GsVirtualMachine vm, GsObject payload = null)
     {
         super(vm);
         
         this.vm = vm;
         
-        data = vm.createObject();
-        data.set("pause", GsDynamic(&bindPause));
-        data.set("resume", GsDynamic(&bindResume));
+        if (payload)
+            this.payload = payload;
+        else
+            this.payload = vm.createObject();
+        this.payload.set("pause", GsDynamic(&bindPause));
+        this.payload.set("resume", GsDynamic(&bindResume));
         
         stack = New!(GsDynamic[])(256);
         callStack = New!(size_t[])(256);
@@ -1010,22 +1020,22 @@ class GsThread: Owner, GsObject
     
     GsDynamic get(string key)
     {
-        return data.get(key);
+        return payload.get(key);
     }
     
     void set(string key, GsDynamic value)
     {
-        return data.set(key, value);
+        return payload.set(key, value);
     }
     
     bool contains(string key)
     {
-        return data.contains(key);
+        return payload.contains(key);
     }
     
     void setPrototype(GsObject proto)
     {
-        data.setPrototype(proto);
+        payload.setPrototype(proto);
     }
     
     // Stack manipulation methods
@@ -1088,7 +1098,7 @@ class GsThread: Owner, GsObject
         running = false;
         paused = true;
         waiting = false;
-        data.set("running", GsDynamic(0.0));
+        payload.set("running", GsDynamic(0.0));
     }
     
     void start(size_t initialIp = 0, size_t initialCallDepth = 1)
@@ -1100,7 +1110,7 @@ class GsThread: Owner, GsObject
         running = true;
         paused = false;
         waiting = false;
-        data.set("running", GsDynamic(1.0));
+        payload.set("running", GsDynamic(1.0));
         yieldValue = GsDynamic();
     }
 }

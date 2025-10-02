@@ -314,11 +314,24 @@ class GsCodeGenerator
                 break;
             
             case NodeType.SpawnExpression:
-                auto params = node.children[1];
-                foreach(child; params.children)
-                    instructions ~= generate(child);
-                size_t numParameters = params.children.length;
-                instructions ~= generate(node.children[0]);
+                auto funcCall = node.children[0];
+                auto spawnParams = node.children[1];
+                size_t numParameters = 0;
+                if (spawnParams.children.length > 0)
+                {
+                    // Push function parameters
+                    numParameters = spawnParams.children.length - 1;
+                    foreach(child; spawnParams.children[1..$])
+                        instructions ~= generate(child);
+                    // Use first spawn parameter as a payload object
+                    instructions ~= generate(spawnParams.children[0]);
+                }
+                else
+                {
+                    // Implicitly create a new payload object
+                    instructions ~= GsInstruction(GsInstructionType.NEW);
+                }
+                instructions ~= generate(funcCall);
                 instructions ~= GsInstruction(GsInstructionType.SPAWN, GsDynamic(cast(double)numParameters));
                 break;
             
