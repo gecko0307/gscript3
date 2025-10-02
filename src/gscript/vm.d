@@ -148,6 +148,8 @@ class GsVirtualMachine: Owner, GsObject
     Array!GsThread threads;
     GsThread mainThread;
     
+    GsThread currentThread;
+    
     bool running = false;
     
     size_t numActiveThreads = 0;
@@ -172,6 +174,8 @@ class GsVirtualMachine: Owner, GsObject
         
         globTime = heap.create!GsGlobalTime(heap);
         globals["time"] = GsDynamic(globTime);
+        
+        globals["channel"] = GsDynamic(&bindCreateChannel);
         
         mainThread = New!GsThread(this);
         mainThread.setPayload(this);
@@ -239,6 +243,12 @@ class GsVirtualMachine: Owner, GsObject
     GsDynamic[] createArray(size_t len)
     {
         return heap.create!(GsDynamic[])(len);
+    }
+    
+    GsDynamic bindCreateChannel(GsDynamic[] args)
+    {
+        GsChannel ch = heap.create!GsChannel(this);
+        return GsDynamic(ch);
     }
     
     bool hasLabel(string name)
@@ -371,6 +381,8 @@ class GsVirtualMachine: Owner, GsObject
                 auto instruction = instructions[tr.ip];
                 
                 tr.ip++;
+                
+                currentThread = tr;
                 
                 switch (instruction.type)
                 {
@@ -960,6 +972,7 @@ class GsVirtualMachine: Owner, GsObject
                                 cf.numParameters = numParams + 1;
                                 
                                 newThread.start(jumpTable[jumpLabel], 0);
+                                numActiveThreads++;
                                 
                                 tr.push(GsDynamic(newThread));
                             }
@@ -1237,13 +1250,16 @@ class GsThread: Owner, GsObject
         if (payload)
             payload.set("running", GsDynamic(0.0));
         
-        // Remove this thread from the linked list
-        if (prev)
-            prev.next = next;
-        if (next)
-            next.prev = prev;
-        prev = null;
-        next = null;
+        if (this !is vm.mainThread)
+        {
+            // Remove this thread from the linked list
+            if (prev)
+                prev.next = next;
+            if (next)
+                next.prev = prev;
+            prev = null;
+            next = null;
+        }
     }
     
     void start(size_t initialIp = 0, size_t initialCallDepth = 1)
@@ -1259,5 +1275,78 @@ class GsThread: Owner, GsObject
                 payload.set("running", GsDynamic(1.0));
             yieldValue = GsDynamic();
         }
+    }
+}
+
+class GsChannel: GsObject
+{
+    GsVirtualMachine vm;
+    GsDynamic payload;
+    GsThread producer;
+    GsThread consumer;
+    
+    this(GsVirtualMachine vm)
+    {
+        this.vm = vm;
+    }
+    
+    GsDynamic get(string key)
+    {
+        if (key == "send")
+            return GsDynamic(&bindSend);
+        else if (key == "receive")
+            return GsDynamic(&bindReceive);
+        else
+            return GsDynamic();
+    }
+    
+    void set(string key, GsDynamic value)
+    {
+        // No-op
+    }
+    
+    bool contains(string key)
+    {
+        return (key == "send" || key == "receive");
+    }
+    
+    void setPrototype(GsObject proto)
+    {
+        // No-op
+    }
+    
+    GsDynamic bindSend(GsDynamic[] args)
+    {
+        if (args.length < 2)
+            return GsDynamic();
+        if (consumer)
+        {
+            consumer.status = GsThreadStatus.Running;
+            consumer.push(args[1]);
+        }
+        else
+        {
+            payload = args[1];
+            vm.currentThread.status = GsThreadStatus.Paused;
+            producer = vm.currentThread;
+        }
+        return GsDynamic();
+    }
+    
+    GsDynamic bindReceive(GsDynamic[] args)
+    {
+        if (producer)
+        {
+            producer.status = GsThreadStatus.Running;
+            producer = null;
+            payload = GsDynamic();
+            return payload;
+        }
+        else
+        {
+            vm.currentThread.status = GsThreadStatus.Paused;
+            consumer = vm.currentThread;
+        }
+        return GsDynamic();
     }
 }
