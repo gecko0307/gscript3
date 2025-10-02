@@ -4,6 +4,10 @@ Work-in-progress third iteration of GScript, a mini scripting language for D. Fu
 
 GScript3 is a concurrent dynamically-typed language aimed at easy embedding and extending.
 
+```
+print "Hello, World!";
+```
+
 ## Development Roadmap
 * [x] VM
 * [x] Parser
