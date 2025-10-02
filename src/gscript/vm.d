@@ -246,19 +246,55 @@ class GsVirtualMachine: Owner, GsObject
         return (name in jumpTable) != null;
     }
     
-    GsDynamic call(string jumpLabel, GsDynamic[] args)
+    // Spawn a new thread
+    GsDynamic spawn(string jumpLabel, GsDynamic[] args)
     {
         if (jumpLabel in jumpTable)
         {
-            auto callFrame = &mainThread.callFrames[0];
+            GsObject payload = this;
+            GsThread newThread;
+            
+            // Look for a free thread
+            for (size_t ti = 0; ti < threads.length; ti++)
+            {
+                auto t = threads.data[ti];
+                if (t.status == GsThreadStatus.Free)
+                {
+                    newThread = t;
+                    break;
+                }
+            }
+            
+            if (newThread is null)
+            {
+                // No free thread, create a new one
+                newThread = New!GsThread(this);
+                threads.append(newThread);
+            }
+            
+            newThread.setPayload(payload);
+            
+            // Add to linked list
+            newThread.prev = mainThread;
+            if (mainThread.next)
+            {
+                mainThread.next.prev = newThread;
+                newThread.next = mainThread.next;
+            }
+            mainThread.next = newThread;
+            
+            auto callFrame = &newThread.callFrames[0];
             for(size_t i = 0; i < args.length; i++)
             {
                 callFrame.parameters[i] = args[i];
             }
             callFrame.numParameters = args.length;
-            mainThread.callDepth = 0;
-            run(jumpTable[jumpLabel], 0);
-            return mainThread.yieldValue;
+            newThread.callDepth = 0;
+            
+            newThread.start(jumpTable[jumpLabel], 0);
+            schedule();
+            
+            return newThread.yieldValue;
         }
         else
         {
@@ -293,8 +329,13 @@ class GsVirtualMachine: Owner, GsObject
     
     void run(size_t initialIp = 0, size_t initialCallDepth = 1)
     {
-        running = true;
         mainThread.start(initialIp, initialCallDepth);
+        schedule();
+    }
+    
+    void schedule()
+    {
+        running = true;
         
         while(running)
         {
