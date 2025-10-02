@@ -356,6 +356,7 @@ class GsVirtualMachine: Owner, GsObject
             // Preempt all active threads in the list
             while(tr !is null)
             {
+                // Ignore paused, stopped, blocked, or free threads
                 if (tr.status != GsThreadStatus.Running && 
                     tr.status != GsThreadStatus.Waiting)
                 {
@@ -1076,11 +1077,12 @@ class GsVirtualMachine: Owner, GsObject
 
 enum GsThreadStatus
 {
-    Free = 0,    // Thread is ready for running
+    Free = 0,    // Thread is idle and ready for running
     Running = 1, // Thread is progressing
     Paused = 2,  // Thread is paused
-    Waiting = 3, // Thread is waiting
-    Stopped = 4  // Thread is terminated
+    Waiting = 3, // Thread is waiting for output from another thread (spinlock)
+    Blocked = 4, // Thread is blocked via a synchronization primitive
+    Stopped = 5  // Thread has terminated execution
 }
 
 class GsThread: Owner, GsObject
@@ -1327,7 +1329,7 @@ class GsChannel: GsObject
         else
         {
             payload = args[1];
-            vm.currentThread.status = GsThreadStatus.Paused;
+            vm.currentThread.status = GsThreadStatus.Blocked;
             producer = vm.currentThread;
         }
         return GsDynamic();
@@ -1344,7 +1346,7 @@ class GsChannel: GsObject
         }
         else
         {
-            vm.currentThread.status = GsThreadStatus.Paused;
+            vm.currentThread.status = GsThreadStatus.Blocked;
             consumer = vm.currentThread;
         }
         return GsDynamic();

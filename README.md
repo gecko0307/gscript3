@@ -2,6 +2,8 @@
 
 Work-in-progress third iteration of GScript, a mini scripting language for D. Future successor of [GScript2](https://github.com/gecko0307/gscript2).
 
+GScript3 is a concurrent dynamically-typed language aimed at easy embedding and extending.
+
 ## Development Roadmap
 * [x] VM
 * [x] Parser
@@ -11,7 +13,8 @@ Work-in-progress third iteration of GScript, a mini scripting language for D. Fu
 * [x] Arena heap
 * [x] VM builtins
 * [x] Green threads + coroutines
-* [x] Releasing and reusing terminated threads
+* [x] Thread pool
+* [x] Channels
 * [ ] Standard library
 
 ## Main Changes from GScript2
@@ -369,4 +372,24 @@ while(thread.running)
 }
 
 print thread.foo; // "test"
+```
+
+## Channels
+
+Channel is a bidirectional inter-thread communication and synchronization primitive. When `send` is called, producer thread is blocked until the message is received by another thread. When `receive` is called, concumer thread is blocked until there is a message available.
+
+```
+const ch = global.channel();
+
+const thread1 = spawn func
+{
+    print ch.receive();
+    ch.send("world");
+};
+
+const thread2 = spawn func
+{
+    ch.send("hello");
+    print ch.receive();
+};
 ```
