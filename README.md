@@ -10,8 +10,7 @@ Work-in-progress third iteration of GScript, a mini scripting language for D. Fu
 * [x] External state access
 * [x] Arena heap
 * [x] VM builtins
-* [x] Green threads
-* [x] Coroutines
+* [x] Green threads + coroutines
 * [ ] Standard library
 
 ## Main Changes from GScript2
@@ -25,11 +24,12 @@ Work-in-progress third iteration of GScript, a mini scripting language for D. Fu
 - A new, more efficient variadic arguments system; see below
 - No explicit referencing. Function reference is passed without `ref` keyword
 - Array length is now returned by the built-in `length` property instead of a global `length` function
-- `print` instead of `writeln`.
+- `print` instead of `writeln`
+- Spawning functions as threads/coroutines; see below.
 
 Architecture improvements:
 - Fast VM with a more efficient ISA
-- VM-level preemptive multithreading ("green threads")
+- VM-level preemptive multithreading ("green threads"). Threads are first-class objects integrated into the prototype model
 - Arena heap instead of the GC for internal allocations. VM is fully GC-free (compiler is not yet)
 - Bytecode can now be serialized into a binary buffer, significantly speeding up the launch of compiled scripts
 - Tighter integration with the D object system. Any D object that inherits from `GsObject` and implements get/set semantics for its properties can be registered in the VM. This gives scripts secure access to the application's internal state.
@@ -308,4 +308,35 @@ while(thread.running)
     thread.i = 0; // modify thread's state while synchronized
     thread.resume();
 }
+```
+
+Spawning object methods:
+
+```
+const obj = {
+    test: func(self, init)
+    {
+        self.i = init;
+        
+        self.i += 1;
+        yield self.i;
+        
+        self.i += 2;
+        yield self.i;
+        
+        self.i += 3;
+        return self.i;
+    }
+};
+
+const thread = spawn(obj, 5) obj.test;
+
+while(thread.running)
+{
+    print sync thread;
+    thread.foo = "test";
+    thread.resume();
+}
+
+print obj.foo; // "test"
 ```

@@ -19,7 +19,6 @@ const thread = spawn(obj, 5) obj.test;
 while(thread.running)
 {
     print sync thread;
-    thread.i = 10; // do something while synchronized
     thread.foo = "test";
     thread.resume(); // resume execution
 }
