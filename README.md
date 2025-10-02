@@ -1,6 +1,6 @@
 # GScript3
 
-Work-in-progress third iteration of GScript, a mini scripting language for D. Future successor of [GScript2](https://github.com/gecko0307/gscript2).
+Work-in-progress third iteration of GScript, a mini scripting language for D.
 
 GScript3 is a concurrent dynamically-typed language aimed at easy embedding and extending.
 
