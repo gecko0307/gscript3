@@ -1174,13 +1174,6 @@ class GsThread: Owner, GsObject
         cp = 0;
         callFrame = &callFrames[0];
         callDepth = 1;
-        // Remove this thread from the linked list
-        if (prev)
-            prev.next = next;
-        if (next)
-            next.prev = prev;
-        prev = null;
-        next = null;
         payload = null;
         yieldValue = GsDynamic();
         return GsDynamic();
@@ -1192,6 +1185,14 @@ class GsThread: Owner, GsObject
         status = GsThreadStatus.Stopped;
         if (payload)
             payload.set("running", GsDynamic(0.0));
+        
+        // Remove this thread from the linked list
+        if (prev)
+            prev.next = next;
+        if (next)
+            next.prev = prev;
+        prev = null;
+        next = null;
     }
     
     void start(size_t initialIp = 0, size_t initialCallDepth = 1)

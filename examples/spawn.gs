@@ -25,4 +25,6 @@ while(thread.running)
 
 print thread.foo; // "test"
 
-thread.release();
+print global.numActiveThreads;
+
+//thread.release();
