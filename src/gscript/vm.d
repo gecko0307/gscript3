@@ -600,7 +600,7 @@ class GsVirtualMachine: Owner, GsObject
                             tr.push(GsDynamic(param.asArray.length));
                         else if (param.type == GsDynamicType.String)
                             tr.push(GsDynamic(param.asString.length));
-                        else if (param.type == GsDynamicType.Undefined)
+                        else if (param.type == GsDynamicType.Null)
                             tr.push(GsDynamic(0.0));
                         else
                             tr.push(GsDynamic(1.0));
@@ -849,7 +849,7 @@ class GsVirtualMachine: Owner, GsObject
                                 {
                                     payload = payloadParam.asObject;
                                 }
-                                else if (payloadParam.type != GsDynamicType.Undefined)
+                                else if (payloadParam.type != GsDynamicType.Null)
                                 {
                                     fatality("Fatality: attempting to payload a thread with %s, which is not an object", payloadParam.type);
                                     return;
