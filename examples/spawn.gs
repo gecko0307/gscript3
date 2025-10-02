@@ -20,7 +20,7 @@ while(thread.running)
 {
     print sync thread;
     thread.foo = "test";
-    thread.resume(); // resume execution
+    thread.resume();
 }
 
 print obj.foo; // "test"

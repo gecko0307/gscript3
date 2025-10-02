@@ -244,13 +244,13 @@ test(5, 10, 20);
 ## Threads
 
 ```
-const thread = spawn func(self)
+const thread = spawn func
 {
-    self.i = 0;
-    while(self.i < 10)
+    let i = 0;
+    while(i < 10)
     {
-        print self.i;
-        self.i += 1;
+        print i;
+        i += 1;
     }
 };
 
@@ -258,26 +258,24 @@ while(thread.running)
 {
     // busy-wait
 }
-
-print thread.i;
 ```
 
 ## Coroutines
 
 ```
-const thread = spawn func(self, init)
+const thread = spawn func
 {
-    self.i = init;
+    let i = 0;
     
-    self.i += 1;
-    yield self.i;
+    i += 1;
+    yield i;
     
-    self.i += 2;
-    yield self.i;
+    i += 2;
+    yield i;
     
-    self.i += 3;
-    return self.i;
-}(5);
+    i += 3;
+    return i;
+};
 
 while(thread.running)
 {
@@ -288,7 +286,7 @@ while(thread.running)
 Alternatively, `sync` can be used instead of `await` to pause execution and synchronize state:
 
 ```
-const thread = spawn func(self, init)
+const thread = spawn(null, 5) func(self, init)
 {
     self.i = init;
     
@@ -300,17 +298,17 @@ const thread = spawn func(self, init)
     
     self.i += 3;
     return self.i;
-}(5);
+};
 
 while(thread.running)
 {
     print sync thread;
-    thread.i = 0; // modify thread's state while synchronized
+    thread.i = 0; // modify thread's payload while synchronized
     thread.resume();
 }
 ```
 
-Spawning object methods:
+Spawning methods and using custom payload objects:
 
 ```
 const obj = {
