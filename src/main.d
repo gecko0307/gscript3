@@ -179,4 +179,6 @@ void main(string[] args)
         ubyte[] code = saveBytecode(instructions);
         std.file.write(bytecodePath, code);
     }
+    
+    debug writeln("allocatedMemory: ", allocatedMemory);
 }

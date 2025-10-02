@@ -14,7 +14,7 @@ const obj = {
     }
 };
 
-const thread = spawn(new obj, 5) obj.test;
+const thread = spawn(obj, 5) obj.test;
 
 while(thread.running)
 {
@@ -24,3 +24,5 @@ while(thread.running)
 }
 
 print thread.foo; // "test"
+
+thread.release();
