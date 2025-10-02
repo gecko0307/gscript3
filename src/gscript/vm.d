@@ -859,8 +859,12 @@ class GsVirtualMachine: Owner, GsObject
                                 threads.append(newThread);
                                 
                                 // Add to linked list
+                                newThread.prev = tr;
                                 if (tr.next)
+                                {
+                                    tr.next.prev = newThread;
                                     newThread.next = tr.next;
+                                }
                                 tr.next = newThread;
                                 
                                 auto cf = &newThread.callFrames[0];
@@ -990,8 +994,10 @@ class GsThread: Owner, GsObject
     bool running = false;
     bool paused = true;
     bool waiting = false;
-    GsDynamic yieldValue;          //
-    GsThread next = null;          // Linked list of threads
+    GsDynamic yieldValue;          // Register for yielded/returned value
+    
+    GsThread prev = null;          // Doubly linked list of threads
+    GsThread next = null;          //
     
     this(GsVirtualMachine vm, GsObject payload = null)
     {
