@@ -61,7 +61,8 @@ Compile a script to bytecode:
 Note: Gscript3 is not a DUB package yet; the embedding API is unstable.
 
 Basic script compilation and running:
-```
+
+```d
 import gscript;
 
 void main(string[] args)
@@ -77,7 +78,7 @@ void main(string[] args)
 
 Binding native functions:
 
-```
+```d
 GsDynamic printSum(GsDynamic[] args)
 {
     // First argument is always VM itself (a `global` object)
@@ -103,7 +104,7 @@ global.printSum(5, 3);
 
 You can bind any object that implements `GsObject` interface:
 
-```
+```d
 class MyObj: GsObject
 {
     GsObject prototype;
