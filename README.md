@@ -17,7 +17,7 @@ GScript3 is a concurrent dynamically-typed language aimed at easy embedding and 
 * [ ] Standard library
 
 ## Why GScript3?
-Most interpreted languages are too cumbersome for embedding in languages other than C/C++. They also tend to be general-purpose, come with lots of architectural quirks, heavy runtimes and verbose APIs. GScript3 is designed to be:
+Most popular scripting engines are too cumbersome for embedding in languages other than C/C++. They also tend to be general-purpose, come with lots of architectural quirks, heavy runtimes and verbose APIs. GScript3 is designed to be:
 - **Simple** - easy to embed into any D application with minimal effort;
 - **Lightweight** - a minimalistic VM with no hidden GC costs;
 - **Concurrent** - built-in green threads, coroutines, and channels;
