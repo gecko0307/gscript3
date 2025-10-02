@@ -174,7 +174,14 @@ class GsVirtualMachine: Owner, GsObject
         globals["time"] = GsDynamic(globTime);
         
         mainThread = New!GsThread(this);
+        mainThread.setPayload(this);
         threads.append(mainThread);
+        
+        foreach (i; 0..31)
+        {
+            auto idleThread = New!GsThread(this);
+            threads.append(idleThread);
+        }
     }
     
     ~this()
@@ -184,7 +191,7 @@ class GsVirtualMachine: Owner, GsObject
         threads.free();
     }
     
-    // GsObject methods
+    // GsObject methods:
     
     GsDynamic get(string key)
     {
@@ -216,7 +223,7 @@ class GsVirtualMachine: Owner, GsObject
         // No-op
     }
     
-    // 
+    // VM control methods:
     
     void fatality(A...)(string fmt, A args)
     {
@@ -282,13 +289,10 @@ class GsVirtualMachine: Owner, GsObject
                 jumpTable[instrunction.operand.asString] = i;
             }
         }
-        
-        finalize();
     }
     
     void run(size_t initialIp = 0, size_t initialCallDepth = 1)
     {
-        finalize();
         running = true;
         mainThread.start(initialIp, initialCallDepth);
         
@@ -868,12 +872,15 @@ class GsVirtualMachine: Owner, GsObject
                                     return;
                                 }
                                 
+                                if (payload is null)
+                                    payload = createObject();
+                                
                                 GsThread newThread;
                                 
                                 // Look for a free thread
                                 for (size_t ti = 0; ti < threads.length; ti++)
                                 {
-                                    auto t = threads[ti];
+                                    auto t = threads.data[ti];
                                     if (t.status == GsThreadStatus.Free)
                                     {
                                         newThread = t;
@@ -881,19 +888,14 @@ class GsVirtualMachine: Owner, GsObject
                                     }
                                 }
                                 
-                                // No free thread, create a new one
                                 if (newThread is null)
                                 {
-                                    newThread = New!GsThread(this, payload);
+                                    // No free thread, create a new one
+                                    newThread = New!GsThread(this);
                                     threads.append(newThread);
                                 }
-                                else
-                                {
-                                    if (payload is null)
-                                        newThread.payload = createObject();
-                                    else
-                                        newThread.payload = payload;
-                                }
+                                
+                                newThread.setPayload(payload);
                                 
                                 // Add to linked list
                                 newThread.prev = tr;
@@ -1049,26 +1051,18 @@ class GsThread: Owner, GsObject
     GsThread prev = null;          // Doubly linked list of threads
     GsThread next = null;          //
     
-    this(GsVirtualMachine vm, GsObject payload = null)
+    this(GsVirtualMachine vm)
     {
         super(vm);
         
         this.vm = vm;
-        
-        if (payload)
-            this.payload = payload;
-        else
-            this.payload = vm.createObject();
-        this.payload.set("pause", GsDynamic(&bindPause));
-        this.payload.set("resume", GsDynamic(&bindResume));
-        this.payload.set("release", GsDynamic(&bindRelease));
         
         stack = New!(GsDynamic[])(256);
         callStack = New!(size_t[])(256);
         callFrames = New!(GsCallFrame[])(256);
         callFrame = &callFrames[0];
         
-        status = GsThreadStatus.Stopped;
+        status = GsThreadStatus.Free;
         
         ip = 0;
         sp = 0;
@@ -1082,6 +1076,15 @@ class GsThread: Owner, GsObject
         Delete(stack);
         Delete(callStack);
         Delete(callFrames);
+    }
+    
+    void setPayload(GsObject payload)
+    {
+        this.payload = payload;
+        this.payload.set("pause", GsDynamic(&bindPause));
+        this.payload.set("resume", GsDynamic(&bindResume));
+        this.payload.set("release", GsDynamic(&bindRelease));
+        this.payload.set("running", GsDynamic(0.0));
     }
     
     GsDynamic get(string key)
@@ -1143,26 +1146,34 @@ class GsThread: Owner, GsObject
     void pause()
     {
         if (status == GsThreadStatus.Running)
+        {
             status = GsThreadStatus.Paused;
+        }
     }
     
     void resume()
     {
         if (status == GsThreadStatus.Paused)
+        {
             status = GsThreadStatus.Running;
+        }
     }
     
     GsDynamic bindPause(GsDynamic[] args)
     {
         if (status == GsThreadStatus.Running)
+        {
             status = GsThreadStatus.Paused;
+        }
         return GsDynamic();
     }
     
     GsDynamic bindResume(GsDynamic[] args)
     {
         if (status == GsThreadStatus.Paused)
+        {
             status = GsThreadStatus.Running;
+        }
         return GsDynamic();
     }
     
@@ -1181,7 +1192,6 @@ class GsThread: Owner, GsObject
     
     void finalize()
     {
-        ip = vm.instructions.length - 1;
         status = GsThreadStatus.Stopped;
         if (payload)
             payload.set("running", GsDynamic(0.0));
@@ -1197,13 +1207,16 @@ class GsThread: Owner, GsObject
     
     void start(size_t initialIp = 0, size_t initialCallDepth = 1)
     {
-        ip = initialIp;
-        sp = 0;
-        cp = 0;
-        callDepth = initialCallDepth;
-        status = GsThreadStatus.Running;
-        if (payload)
-            payload.set("running", GsDynamic(1.0));
-        yieldValue = GsDynamic();
+        if (status == GsThreadStatus.Free)
+        {
+            ip = initialIp;
+            sp = 0;
+            cp = 0;
+            callDepth = initialCallDepth;
+            status = GsThreadStatus.Running;
+            if (payload)
+                payload.set("running", GsDynamic(1.0));
+            yieldValue = GsDynamic();
+        }
     }
 }
