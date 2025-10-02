@@ -14,7 +14,7 @@ const obj = {
     }
 };
 
-const thread = spawn(obj, 5) obj.test;
+const thread = spawn(new obj, 5) obj.test;
 
 while(thread.running)
 {
@@ -23,4 +23,4 @@ while(thread.running)
     thread.resume();
 }
 
-print obj.foo; // "test"
+print thread.foo; // "test"
