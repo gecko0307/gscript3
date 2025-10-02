@@ -12,10 +12,17 @@ GScript3 is a concurrent dynamically-typed language aimed at easy embedding and 
 * [x] External state access
 * [x] Arena heap
 * [x] VM builtins
-* [x] Green threads + coroutines
-* [x] Thread pool
+* [x] Multithreading
 * [x] Channels
 * [ ] Standard library
+
+## Why GScript3?
+Most interpreted languages are too cumbersome for embedding in languages other than C/C++. They also tend to be general-purpose, come with lots of architectural quirks, heavy runtimes and verbose APIs. GScript3 is designed to be:
+- **Simple** - easy to embed into any D application with minimal effort;
+- **Lightweight** - a minimalistic VM with no hidden GC costs;
+- **Concurrent** - built-in green threads, coroutines, and channels;
+- **Extensible** - enables host applications to define specialized runtime objects;
+- **Familiar** - concise, JavaScript-like syntax.
 
 ## Main Changes from GScript2
 - `let` istead of `var`
@@ -34,6 +41,7 @@ GScript3 is a concurrent dynamically-typed language aimed at easy embedding and 
 Architecture improvements:
 - Fast VM with a more efficient ISA
 - VM-level preemptive multithreading ("green threads"). Threads are first-class citizens integrated into the prototype inheritance model
+- Host-defined synchronization primitives
 - Arena heap instead of the GC for internal allocations. VM is fully GC-free (compiler is not yet)
 - Bytecode can now be serialized into a binary buffer, significantly speeding up the launch of compiled scripts
 - Tighter integration with the D object system. Any D object that inherits from `GsObject` and implements get/set semantics for its properties can be registered in the VM. This gives scripts secure access to the application's internal state.
