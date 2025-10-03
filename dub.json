@@ -14,8 +14,8 @@
             "dependencies": {
                 "dlib": "~>1.3.3"
             },
-            "sourcePaths": ["gscript", "tools/gs"],
-            "importPaths": ["gscript", "tools/gs"],
+            "sourcePaths": ["src", "tools/gs"],
+            "importPaths": ["src", "tools/gs"],
             "mainSourceFile": "tools/gs/main.d",
             "buildRequirements":[
                 "allowWarnings"
@@ -28,8 +28,8 @@
             "dependencies": {
                 "dlib": "~>1.3.3"
             },
-            "sourcePaths": ["gscript", "tools/gsrunner"],
-            "importPaths": ["gscript", "tools/gsrunner"],
+            "sourcePaths": ["src", "tools/gsrunner"],
+            "importPaths": ["src", "tools/gsrunner"],
             "mainSourceFile": "tools/gsrunner/main.d",
             "buildRequirements":[
                 "allowWarnings"
