@@ -1,0 +1,5 @@
+{
+    "main": "src/main.gs",
+    "target": "app.exe",
+    "version": "1.0.0"
+}
