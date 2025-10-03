@@ -56,7 +56,7 @@ Architecture improvements:
 
 Gscript3 interpreter comes in two forms - `gs` and `gsrunner`.
 - `gs` is the main command line tool to run and compile scripts;
-- `gsrunner` is a minimal runtime executable used to distribute standalone applications packed with compiled bytecode.
+- `gsrunner` is a runtime stub used to distribute standalone applications packed with compiled bytecode.
 
 Running a script:
 
