@@ -193,7 +193,8 @@ void main(string[] args)
     string exePath = thisExePath();
     string exeDirectory = dirName(exePath);
     
-    string defaultInputFilename = buildPath(exeDirectory, "main.gsc");
+    string defaultInputScriptFilename = buildPath(exeDirectory, "main.gs");
+    string defaultInputBytecodeFilename = buildPath(exeDirectory, "main.gsc");
     
     GsInstruction[] instructions;
     bool showHelp = false;
@@ -203,9 +204,6 @@ void main(string[] args)
     string inputFilename;
     string outputFilename;
     ubyte[] code;
-    
-    if (args.length == 1)
-        build = true;
     
     string[] gsArgs = args;
     string[] scriptArgs = [args[0]];
@@ -237,13 +235,22 @@ void main(string[] args)
         return;
     }
     
+    // Try to load default script (main.gs or main.gsc)
     if (inputFilename.length == 0)
-        inputFilename = defaultInputFilename;
-    
-    if (!exists(inputFilename))
     {
-        writeln(inputFilename, " not found");
-        return;
+        if (exists(defaultInputScriptFilename))
+        {
+            inputFilename = defaultInputScriptFilename;
+        }
+        else if (exists(defaultInputBytecodeFilename))
+        {
+            inputFilename = defaultInputBytecodeFilename;
+        }
+        else
+        {
+            writeln(defaultInputScriptFilename, " not found");
+            return;
+        }
     }
     
     string inputExtension = extension(inputFilename);
