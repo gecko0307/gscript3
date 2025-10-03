@@ -18,6 +18,7 @@ print "Hello, World!";
 * [x] VM builtins
 * [x] Multithreading
 * [x] Channels
+* [x] Basic build system
 * [ ] Standard library
 
 ## Why GScript3?
