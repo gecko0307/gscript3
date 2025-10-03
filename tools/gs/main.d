@@ -205,6 +205,9 @@ void main(string[] args)
         "input|i", "Input file (.gs, .gsc, .json)", &inputFilename
     );
     
+    if (args.length == 1)
+        build = true;
+    
     if (showHelp)
     {
         defaultGetoptPrinter(format("Usage: %s [options]", baseName(exePath)), helpInformation.options);
