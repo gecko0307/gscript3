@@ -100,7 +100,7 @@ void packStandalone(string interpreterPath, ubyte[] code, string outputPath)
         ubyte[] packedData = interpreter ~ code ~ cast(ubyte[])"MAIN" ~ codeSize;
         std.file.write(outputPath, packedData);
         
-        writeln("Successfully built to ", outputPath);
+        writeln("Successfully generated ", outputPath);
     }
     catch (Exception e)
     {
@@ -120,6 +120,7 @@ void buildProject(string exeDirectory, string inputFilename)
     }
     
     // Load config
+    writefln("Loading project config %s...", inputFilename);
     ProjectConfig config = loadConfig(exeDirectory, inputFilename);
     
     if (!exists(config.mainScript))
@@ -134,6 +135,7 @@ void buildProject(string exeDirectory, string inputFilename)
     if (extension(config.mainScript) == ".gs")
     {
         // Load and compile source code
+        writefln("Compiling %s...", config.mainScript);
         string script = readText(config.mainScript);
         GsInstruction[] instructions = compile(script, config.mainScript);
         code = saveBytecode(instructions);
@@ -141,6 +143,7 @@ void buildProject(string exeDirectory, string inputFilename)
     else if (extension(config.mainScript) == ".gsc")
     {
         // Load prebuilt byte code
+        writefln("Loading %s...", config.mainScript);
         code = cast(ubyte[])std.file.read(config.mainScript);
     }
     
@@ -155,6 +158,7 @@ void buildProject(string exeDirectory, string inputFilename)
         return;
     }
     
+    writefln("Using runner %s", interpteterFilename);
     copy(interpteterFilename, config.target);
     
     version(Windows)
@@ -163,6 +167,8 @@ void buildProject(string exeDirectory, string inputFilename)
         
         if (exists(rceditFilename))
         {
+            writefln("Patching the runner...");
+            
             auto rcedit = execute([
                 rceditFilename,
                 config.target,
@@ -176,6 +182,7 @@ void buildProject(string exeDirectory, string inputFilename)
         }
     }
     
+    writefln("Packing to %s...", config.target);
     packStandalone(config.target, code, config.target);
 }
 
@@ -183,7 +190,6 @@ void main(string[] args)
 {
     string exePath = thisExePath();
     string exeDirectory = dirName(exePath);
-    string bytecodePath;
     
     string defaultInputFilename = buildPath(exeDirectory, "main.gsc");
     
@@ -196,6 +202,9 @@ void main(string[] args)
     string outputFilename;
     ubyte[] code;
     
+    if (args.length == 1)
+        build = true;
+    
     auto helpInformation = getopt(
         args,
         "help|h", "Show help", &showHelp,
@@ -205,15 +214,13 @@ void main(string[] args)
         "input|i", "Input file (.gs, .gsc, .json)", &inputFilename
     );
     
-    if (args.length == 1)
-        build = true;
-    
     if (showHelp)
     {
         defaultGetoptPrinter(format("Usage: %s [options]", baseName(exePath)), helpInformation.options);
         return;
     }
-    else if (build)
+    
+    if (build)
     {
         buildProject(exeDirectory, inputFilename);
         return;
@@ -228,43 +235,39 @@ void main(string[] args)
         return;
     }
     
-    if (code.length)
+    string inputExtension = extension(inputFilename);
+    string inputDirectory = dirName(inputFilename);
+    string bytecodeFilename = baseName(inputFilename, inputExtension) ~ ".gsc";
+    string bytecodePath = buildPath(inputDirectory, bytecodeFilename);
+    
+    if (inputExtension == ".gsc")
     {
+        code = cast(ubyte[])std.file.read(inputFilename);
         instructions = loadBytecode(code);
         saveCode = false;
     }
     else
     {
-        string inputExtension = extension(inputFilename);
-        string inputDirectory = dirName(inputFilename);
-        string bytecodeFilename = baseName(inputFilename, inputExtension) ~ ".gsc";
-        bytecodePath = buildPath(inputDirectory, bytecodeFilename);
-        if (inputExtension == ".gsc")
+        bool needToCompile = true;
+        if (exists(bytecodePath))
         {
-            code = cast(ubyte[])std.file.read(inputFilename);
-            instructions = loadBytecode(code);
-            saveCode = false;
-        }
-        else
-        {
-            bool needToCompile = true;
-            if (exists(bytecodePath))
+            if (timeLastModified(inputFilename, SysTime.min) < timeLastModified(bytecodePath, SysTime.min))
             {
-                if (timeLastModified(inputFilename, SysTime.min) < timeLastModified(bytecodePath, SysTime.min))
-                {
-                    code = cast(ubyte[])std.file.read(bytecodePath);
-                    instructions = loadBytecode(code);
-                    needToCompile = false;
-                }
-            }
-            
-            if (needToCompile)
-            {
-                string script = readText(inputFilename);
-                instructions = compile(script, inputFilename);
-                saveCode = true;
+                code = cast(ubyte[])std.file.read(bytecodePath);
+                instructions = loadBytecode(code);
+                needToCompile = false;
             }
         }
+        
+        if (needToCompile)
+        {
+            string script = readText(inputFilename);
+            instructions = compile(script, inputFilename);
+            saveCode = true;
+        }
+        
+        if (compileOnly)
+            saveCode = true;
     }
     
     if (instructions.length == 0)
