@@ -21,8 +21,8 @@ print "Hello, World!";
 * [ ] Standard library
 
 ## Why GScript3?
-Most popular scripting engines are too cumbersome for embedding in languages other than C/C++. They also tend to be general-purpose, come with lots of architectural quirks, heavy runtimes and verbose APIs. GScript3 is designed to be:
-- **Simple** - easy to embed into any D application with minimal effort;
+Most popular scripting engines are too cumbersome for embedding in languages other than C/C++. They also come with lots of architectural quirks, heavy runtimes and verbose APIs. GScript3 is designed to be:
+- **Simple** - easy to embed into any D application with minimal effort, as well as to "compile" into standalone executables;
 - **Lightweight** - a minimalistic VM with no hidden GC costs;
 - **Concurrent** - built-in green threads, coroutines, and channels;
 - **Extensible** - enables host applications to define specialized runtime objects;
