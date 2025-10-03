@@ -37,6 +37,8 @@ import std.bitmanip;
 import std.format;
 import std.json;
 import std.process;
+import std.algorithm;
+import std.array;
 
 import dlib.core.memory;
 
@@ -205,8 +207,17 @@ void main(string[] args)
     if (args.length == 1)
         build = true;
     
+    string[] gsArgs = args;
+    string[] scriptArgs = [args[0]];
+    auto sepIndex = args.countUntil("--");
+    if (sepIndex != -1)
+    {
+        gsArgs = args[0..sepIndex];
+        scriptArgs ~= args[sepIndex+1..$];
+    }
+    
     auto helpInformation = getopt(
-        args,
+        gsArgs,
         "help|h", "Show help", &showHelp,
         "compile|c", "Compile script to bytecode without running", &compileOnly,
         "build|b", "Build standalone executable", &build,
@@ -281,6 +292,9 @@ void main(string[] args)
     if (!compileOnly)
     {
         auto vm = New!GsVirtualMachine();
+        GsDynamic[] vmArgs = scriptArgs.map!(s => GsDynamic(s)).array;
+        
+        vm.set("args", GsDynamic(vmArgs));
         vm.load(instructions);
         vm.run();
         Delete(vm);

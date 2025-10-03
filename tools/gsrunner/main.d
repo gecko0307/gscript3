@@ -28,11 +28,11 @@ DEALINGS IN THE SOFTWARE.
 module main;
 
 import std.stdio;
-import std.conv;
 import std.file;
 import std.path;
-import std.getopt;
 import std.bitmanip;
+import std.algorithm;
+import std.array;
 
 import dlib.core.memory;
 
@@ -100,6 +100,8 @@ void main(string[] args)
     }
     
     auto vm = New!GsVirtualMachine();
+    GsDynamic[] vmArgs = args.map!(s => GsDynamic(s)).array;
+    vm.set("args", GsDynamic(vmArgs));
     vm.load(instructions);
     vm.run();
     Delete(vm);

@@ -19,7 +19,7 @@ print "Hello, World!";
 * [x] Multithreading
 * [x] Channels
 * [x] Basic build system
-* [ ] Expose command line arguments
+* [x] Expose command line arguments
 * [ ] Standard library
 
 ## Why GScript3?
