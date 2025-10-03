@@ -6,12 +6,34 @@
     "authors": [
         "Timur Gafarov"
     ],
-    "dependencies": {
-        "dlib": "~>1.3.3"
-    },
-    "buildRequirements":[
-        "allowWarnings"
-    ],
-    "sourcePaths": ["src"],
-    "mainSourceFile": "src/main.d"
+    "subPackages": [
+        {
+            "name": "gs",
+            "targetType": "executable",
+            "targetName": "gs",
+            "dependencies": {
+                "dlib": "~>1.3.3"
+            },
+            "sourcePaths": ["gscript", "tools/gs"],
+            "importPaths": ["gscript", "tools/gs"],
+            "mainSourceFile": "tools/gs/main.d",
+            "buildRequirements":[
+                "allowWarnings"
+            ]
+        },
+        {
+            "name": "gsrunner",
+            "targetType": "executable",
+            "targetName": "gsrunner",
+            "dependencies": {
+                "dlib": "~>1.3.3"
+            },
+            "sourcePaths": ["gscript", "tools/gsrunner"],
+            "importPaths": ["gscript", "tools/gsrunner"],
+            "mainSourceFile": "tools/gsrunner/main.d",
+            "buildRequirements":[
+                "allowWarnings"
+            ]
+        }
+    ]
 }
