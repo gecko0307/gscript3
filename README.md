@@ -27,7 +27,7 @@ Most popular scripting engines are too cumbersome for embedding in languages oth
 - **Simple** - easy to embed into any D application with minimal effort, as well as to "compile" into standalone executables;
 - **Lightweight** - a minimalistic VM with no hidden GC costs;
 - **Concurrent** - built-in green threads, coroutines, and channels;
-- **Extensible** - enables host applications to define specialized runtime objects;
+- **Extensible** - enables host applications to expose their functions and define specialized runtime objects;
 - **Familiar** - concise, JavaScript-like syntax.
 
 ## Main Changes from GScript2
