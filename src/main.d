@@ -137,6 +137,31 @@ ubyte[] getEmbeddedBytecode(string exePath)
     return readCode;
 }
 
+void packStandalone(string interpreterPath, string bytecodePath, string outputPath)
+{
+    try
+    {
+        ubyte[] interpreter = cast(ubyte[])std.file.read(interpreterPath);
+        ubyte[] code = cast(ubyte[])std.file.read(bytecodePath);
+        
+        string magic = cast(string)code[0 .. 4];
+        if (magic != GSIR_MAGIC)
+            throw new Exception("Not a GSIR file");
+        
+        ubyte[4] codeSize;
+        codeSize[] = nativeToLittleEndian(cast(uint)code.length)[0..4];
+        
+        ubyte[] packedData = interpreter ~ code ~ cast(ubyte[])"MAIN" ~ codeSize;
+        std.file.write(outputPath, packedData);
+        
+        writeln("Packed ", interpreterPath, " + ", bytecodePath, " -> ", outputPath);
+    }
+    catch (Exception e)
+    {
+        writeln("Error: ", e.msg);
+    }
+}
+
 void main(string[] args)
 {
     string exePath = thisExePath();
@@ -145,16 +170,43 @@ void main(string[] args)
     string defaultFilename = buildPath(exeDirectory, "main.gsc");
     
     GsInstruction[] instructions;
+    bool showHelp = false;
     bool saveCode = false;
     bool compileOnly = false;
+    bool packOnly = false;
     string inputFilename;
+    string outputFilename;
     ubyte[] code;
     
     auto helpInformation = getopt(
         args,
+        "help|h", "Show help", &showHelp,
         "compile|c", "Only compile script without running", &compileOnly,
-        "input|i", "Input file (.gs, .gsa, .gsc)", &inputFilename
+        "pack|p", "Only pack script without running", &packOnly,
+        "output|o", "Output file", &outputFilename,
+        "input|i", "Input file (.gs, .gsc)", &inputFilename
     );
+    
+    if (showHelp)
+    {
+        defaultGetoptPrinter("Usage: gs [options]", helpInformation.options);
+        return;
+    }
+    
+    if (packOnly)
+    {
+        if (inputFilename.length == 0)
+        {
+            writeln("Input file not specified!");
+            return;
+        }
+        
+        if (outputFilename.length == 0)
+            outputFilename = "app.exe";
+        
+        packStandalone(exePath, inputFilename, outputFilename);
+        return;
+    }
     
     if (inputFilename.length == 0)
     {
@@ -181,12 +233,14 @@ void main(string[] args)
         instructions = loadBytecode(code);
         saveCode = false;
     }
+    /*
     else if (inputExtension == ".gsa")
     {
         string program = readText(inputFilename);
         instructions = assemble(program);
         saveCode = true;
     }
+    */
     else if (inputExtension == ".gsc")
     {
         code = cast(ubyte[])std.file.read(inputFilename);
@@ -237,6 +291,8 @@ void main(string[] args)
     if (saveCode)
     {
         code = saveBytecode(instructions);
+        if (outputFilename.length)
+            bytecodePath = outputFilename;
         std.file.write(bytecodePath, code);
     }
     
