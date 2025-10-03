@@ -34,6 +34,7 @@ import std.path;
 import std.datetime: SysTime;
 import std.getopt;
 import std.bitmanip;
+import std.format;
 
 import dlib.core.memory;
 
@@ -189,7 +190,7 @@ void main(string[] args)
     
     if (showHelp)
     {
-        defaultGetoptPrinter("Usage: gs [options]", helpInformation.options);
+        defaultGetoptPrinter(format("Usage: %s [options]", baseName(exePath)), helpInformation.options);
         return;
     }
     
