@@ -33,6 +33,7 @@ import std.file;
 import std.path;
 import std.datetime: SysTime;
 import std.getopt;
+import std.bitmanip;
 
 import dlib.core.memory;
 
@@ -91,12 +92,63 @@ GsDynamic printSum(GsDynamic[] args)
     return GsDynamic(0);
 }
 
+ubyte[] getEmbeddedBytecode(string exePath)
+{
+    auto f = File(exePath, "r");
+    
+    // Read signature
+    f.seek(-8, SEEK_END);
+    ubyte[8] embedSignatureBuffer;
+    ubyte[] embedSignature = f.rawRead(embedSignatureBuffer);
+    if (embedSignature[0..4] != "MAIN")
+    {
+        // Embed signature not found
+        return [];
+    }
+    
+    debug writefln("File size: %s byte(s)", f.size);
+
+    // Read embed size
+    debug writeln("Found embed signature");
+    ubyte[4] emdedSizeData = embedSignature[4..$];
+    uint emdedSize = littleEndianToNative!uint(emdedSizeData);
+    debug writeln("Embed size: ", emdedSize);
+    
+    // Validate embed size
+    if (emdedSize == 0 || emdedSize > f.size - 8)
+    {
+        writeln("Invalid embedded bytecode size!");
+        return [];
+    }
+    
+    // Read embedded bytecode
+    int embedOffset = -8 - cast(int)emdedSize;
+    debug writeln("Seek to ", embedOffset);
+    f.seek(embedOffset, SEEK_END);
+    debug writeln("Position after seek: ", f.tell);
+    ubyte[] code = new ubyte[emdedSize];
+    ubyte[] readCode = f.rawRead(code);
+    debug writefln("Read %s byte(s)", readCode.length);
+    if (readCode.length != code.length) {
+        writeln("Failed to read embedded bytecode!");
+        return [];
+    }
+    
+    return readCode;
+}
+
 void main(string[] args)
 {
+    string exePath = thisExePath();
+    string exeDirectory = dirName(exePath);
+    
+    string defaultFilename = buildPath(exeDirectory, "main.gsc");
+    
     GsInstruction[] instructions;
     bool saveCode = false;
     bool compileOnly = false;
     string inputFilename;
+    ubyte[] code;
     
     auto helpInformation = getopt(
         args,
@@ -106,14 +158,17 @@ void main(string[] args)
     
     if (inputFilename.length == 0)
     {
-        writeln("Usage: program [--compile] --input=<file>");
-        return;
+        inputFilename = defaultFilename;
     }
     
     if (!exists(inputFilename))
     {
-        writeln(inputFilename, " not found");
-        return;
+        code = getEmbeddedBytecode(exePath);
+        if (code.length == 0)
+        {
+            writeln(inputFilename, " not found");
+            return;
+        }
     }
     
     string inputExtension = extension(inputFilename);
@@ -121,7 +176,12 @@ void main(string[] args)
     string bytecodeFilename = baseName(inputFilename, inputExtension) ~ ".gsc";
     string bytecodePath = buildPath(inputDirectory, bytecodeFilename);
     
-    if (inputExtension == ".gsa")
+    if (code.length)
+    {
+        instructions = loadBytecode(code);
+        saveCode = false;
+    }
+    else if (inputExtension == ".gsa")
     {
         string program = readText(inputFilename);
         instructions = assemble(program);
@@ -129,7 +189,7 @@ void main(string[] args)
     }
     else if (inputExtension == ".gsc")
     {
-        ubyte[] code = cast(ubyte[])std.file.read(inputFilename);
+        code = cast(ubyte[])std.file.read(inputFilename);
         instructions = loadBytecode(code);
         saveCode = false;
     }
@@ -140,7 +200,7 @@ void main(string[] args)
         {
             if (timeLastModified(inputFilename, SysTime.min) < timeLastModified(bytecodePath, SysTime.min))
             {
-                ubyte[] code = cast(ubyte[])std.file.read(bytecodePath);
+                code = cast(ubyte[])std.file.read(bytecodePath);
                 instructions = loadBytecode(code);
                 needToCompile = false;
             }
@@ -176,7 +236,7 @@ void main(string[] args)
     
     if (saveCode)
     {
-        ubyte[] code = saveBytecode(instructions);
+        code = saveBytecode(instructions);
         std.file.write(bytecodePath, code);
     }
     

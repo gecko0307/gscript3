@@ -1,0 +1,18 @@
+{
+    "name": "gslink",
+    "description": "GScript3 Link Tool",
+    "homepage": "",
+    "license": "Boost",
+    "authors": [
+        "Timur Gafarov"
+    ],
+    "dependencies": {
+        "dlib": "~>1.3.3"
+    },
+    "buildRequirements":[
+        "allowWarnings"
+    ],
+    "sourcePaths": ["src"],
+    "mainSourceFile": "src/main.d",
+    "targetName": "../gslink"
+}

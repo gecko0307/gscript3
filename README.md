@@ -56,9 +56,15 @@ Run a script:
 
 `gs -i script.gs`
 
-Compile a script to bytecode:
+Compile a script without running:
 
 `gs -c -i script.gs`
+
+GScript3 interpreter automatically compiles scripts to a bytecode file (*.gsc). It can be executed instead of the script itself:
+
+`gs -i script.gsc`
+
+The interpreter automatically loads and runs `main.gsc` file from the executable directory if you don't specify an input file. So you can ship gs executable with `main.gsc` file to end users.
 
 ## Embedding
 
