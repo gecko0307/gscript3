@@ -19,6 +19,7 @@ print "Hello, World!";
 * [x] Multithreading
 * [x] Channels
 * [x] Basic build system
+* [ ] Expose command line arguments
 * [ ] Standard library
 
 ## Why GScript3?
@@ -49,7 +50,7 @@ Architecture improvements:
 - Host-defined synchronization primitives
 - Arena heap instead of the GC for internal allocations. VM is fully GC-free (compiler is not yet)
 - Bytecode can now be serialized into a binary buffer, significantly speeding up the launch of compiled scripts
-- Tighter integration with the D object system. Any D object that inherits from `GsObject` and implements get/set semantics for its properties can be registered in the VM. This gives scripts secure access to the application's internal state.
+- Flexible exposing and integration with the D object system. Any D object that inherits from `GsObject` and implements get/set semantics for its properties can be registered in the VM. This gives scripts secure access to the application's internal state.
 
 ## Usage
 
@@ -102,7 +103,7 @@ void main(string[] args)
 }
 ```
 
-Binding native functions:
+Exposing native functions:
 
 ```d
 GsDynamic printSum(GsDynamic[] args)
@@ -128,7 +129,7 @@ Script:
 global.printSum(5, 3);
 ```
 
-You can bind any object that implements `GsObject` interface:
+You can expose any object that implements `GsObject` interface:
 
 ```d
 class MyObj: GsObject
