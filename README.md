@@ -64,7 +64,9 @@ GScript3 interpreter automatically compiles scripts to a bytecode file (*.gsc). 
 
 `gs -i script.gsc`
 
-The interpreter automatically loads and runs `main.gsc` file from the executable directory if you don't specify an input file. So you can ship gs executable with `main.gsc` file to end users.
+The interpreter automatically loads and runs `main.gsc` file from the executable directory if you don't specify an input file. So you can ship gs executable with `main.gsc` file to end users as a standalone application. You can also pack the bytecode with the interpreter into a single executable using gslink tool:
+
+`gslink gs.exe m.gsc main.exe`
 
 ## Embedding
 
