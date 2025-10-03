@@ -108,9 +108,8 @@ void packStandalone(string interpreterPath, ubyte[] code, string outputPath)
     }
 }
 
-void buildProject(string exeDirectory, string inputFilename, string outputFilename)
+void buildProject(string exeDirectory, string inputFilename)
 {
-    // Build project by default
     if (inputFilename.length == 0)
         inputFilename = "gsproject.json";
     
@@ -121,24 +120,13 @@ void buildProject(string exeDirectory, string inputFilename, string outputFilena
     }
     
     // Load config
-    ProjectConfig config;
-    if (extension(inputFilename) == ".json")
-    {
-        config = loadConfig(exeDirectory, inputFilename);
-    }
-    else
-    {
-        config.mainScript = inputFilename;
-    }
+    ProjectConfig config = loadConfig(exeDirectory, inputFilename);
     
     if (!exists(config.mainScript))
     {
         writeln(config.mainScript, " not found");
         return;
     }
-    
-    if (outputFilename.length != 0)
-        config.target = outputFilename;
     
     // TODO: other options
     
@@ -214,7 +202,7 @@ void main(string[] args)
         "compile|c", "Compile script to bytecode without running", &compileOnly,
         "build|b", "Build standalone executable", &build,
         "output|o", "Output file", &outputFilename,
-        "input|i", "Input file (.gs, .gsc)", &inputFilename
+        "input|i", "Input file (.gs, .gsc, .json)", &inputFilename
     );
     
     if (showHelp)
@@ -224,7 +212,7 @@ void main(string[] args)
     }
     else if (build)
     {
-        buildProject(exeDirectory, inputFilename, outputFilename);
+        buildProject(exeDirectory, inputFilename);
         return;
     }
     
