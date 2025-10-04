@@ -412,6 +412,60 @@ while(thread.running)
 print thread.foo; // "test"
 ```
 
+## Memory Isolation
+
+By default threads allocate their dynamic data in isolated local heaps. Thread-local reference types (objects, arrays, dynamically constructed strings) are not allowed to escape outside the thread's context. Using `shared` keyword you can explicitly create data in the global heap to safely escape references:
+
+```
+const thread = spawn func
+{
+    const arr1 = shared [10, 5, 6];
+    const arr2 = [10, 5, 6];
+    
+    global.arr = arr1; // ok
+    global.arr = arr2; // error!
+};
+```
+
+`shared` applies to the construction operation (an operation that allocates memory). So, for example, string concatenation should be marked as `shared` to allocate the result in the global heap:
+
+```
+const str = shared("hello, " ~ "world!");
+```
+
+Compound assignment operations that allocate memory should also be marked as `shared` for global access:
+
+```
+const thread = spawn func
+{
+    global.arr = shared [0, 1, 2];
+    shared global.arr ~= 3;
+};
+```
+
+Escape checker disallows passing thread-local data to external functions (excluding builtins such as array methods). This can be **unsafely** bypassed using `escape` operator:
+
+```
+func test(value)
+{
+    print value;
+}
+
+const thread = spawn func
+{
+    const arr = [0, 1, 2];
+    test(escape arr);
+};
+```
+
+`escape`, like `shared`, applies to the result of the expression. It explcitly marks the value as owned by the main thread, so it can be passed around freely. Using it may result in dangling references once the thread is released. Generally, it is not recommended to escape references; it's a relaxation for special cases when the programmer takes responsibility for the outcome.
+
+When you are completely done with the thread and no longer need its memory, you can release it - reset its heap and return it to the pool for reuse:
+
+```
+thread.release();
+```
+
 ## Channels
 
 Channel is a bidirectional inter-thread communication and synchronization primitive. When `send` is called, producer thread is blocked until the message is received by another thread. When `receive` is called, concumer thread is blocked until there is a message available.

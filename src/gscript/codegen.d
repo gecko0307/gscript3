@@ -197,6 +197,8 @@ class GsCodeGenerator
                 ASTNode lhs = node.children[0];
                 string name = lhs.value;
                 ASTNode rhs = node.children[1];
+                if (node.sharedAccess)
+                    rhs.sharedAccess = node.sharedAccess;
                 instructions ~= generate(rhs);
                 if (lhs.type == NodeType.MemberPropertyAccessExpression)
                 {
@@ -372,6 +374,8 @@ class GsCodeGenerator
                 break;
             
             case NodeType.ExpressionStatement:
+                if (node.sharedAccess)
+                    node.children[0].sharedAccess = node.sharedAccess;
                 instructions ~= generate(node.children[0]);
                 instructions ~= GsInstruction(GsInstructionType.POP);
                 break;

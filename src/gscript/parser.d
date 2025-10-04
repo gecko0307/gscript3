@@ -1216,6 +1216,16 @@ class GsParser
             stat.programScope = program.peekScope();
             return stat;
         }
+        else if (currentToken.value == "shared")
+        {
+            eat(GsTokenType.Keyword); // "shared"
+            ASTNode expr = parseExpression();
+            eat(GsTokenType.Semicolon); // ';'
+            auto stat = new ASTNode(NodeType.ExpressionStatement, "", [expr]);
+            stat.programScope = program.peekScope();
+            stat.sharedAccess = true;
+            return stat;
+        }
         else if (currentToken.value == "import")
         {
             eat(GsTokenType.Keyword); // import
