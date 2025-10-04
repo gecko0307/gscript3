@@ -40,7 +40,8 @@ enum GsDynamicType: uint
     Array = 3,
     Object = 4,
     NativeMethod = 5,
-    NativeFunction = 6
+    NativeFunction = 6,
+    Error = 7
 }
 
 alias GsNativeMethod = GsDynamic delegate(GsDynamic[]);
@@ -123,6 +124,8 @@ struct GsDynamic
                 return "delegate";
             case GsDynamicType.NativeFunction:
                 return "function";
+            case GsDynamicType.Error:
+                return "error";
             default:
                 return "null";
         }

@@ -466,6 +466,8 @@ When you are completely done with the thread and no longer need its memory, you 
 thread.release();
 ```
 
+Threads usually don't crash the VM on error. Instead they print a stack trace and return. On the other hand, error in the main thread is considered fatal for the VM.
+
 ## Channels
 
 Channel is a bidirectional inter-thread communication and synchronization primitive. When `send` is called, producer thread is blocked until the message is received by another thread. When `receive` is called, concumer thread is blocked until there is a message available.
