@@ -830,6 +830,7 @@ class GsVirtualMachine: Owner, GsObject
                     case GsInstructionType.ARRAY_DEF:
                         uint region = cast(uint)instruction.operand.asNumber;
                         size_t len = cast(size_t)tr.pop().asNumber;
+                        GsDynamic defaultValue = tr.pop();
                         GsDynamic[] arr;
                         GsObject owner;
                         if (len > 0)
@@ -852,6 +853,10 @@ class GsVirtualMachine: Owner, GsObject
                             else
                                 owner = tr;
                         }
+                        
+                        if (defaultValue.type != GsDynamicType.Null)
+                            arr[] = defaultValue;
+                        
                         GsDynamic result = GsDynamic(arr);
                         result.owner = owner;
                         tr.push(result);

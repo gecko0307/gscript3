@@ -458,9 +458,21 @@ class GsCodeGenerator
             case NodeType.ArrayExpression:
                 auto params = node.children[0];
                 if (params.children.length)
+                {
+                    // Default type
+                    if (params.children.length > 1)
+                        instructions ~= generate(params.children[1]);
+                    else
+                        instructions ~= GsInstruction(GsInstructionType.PUSH, GsDynamic());
+                    
+                    // Array length
                     instructions ~= generate(params.children[0]);
+                }
                 else
+                {
+                    instructions ~= GsInstruction(GsInstructionType.PUSH, GsDynamic());
                     instructions ~= GsInstruction(GsInstructionType.PUSH, GsDynamic(0.0));
+                }
                 uint region = !node.sharedAccess;
                 instructions ~= GsInstruction(GsInstructionType.ARRAY_DEF, GsDynamic(cast(double)region));
                 break;
