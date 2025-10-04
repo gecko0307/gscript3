@@ -354,6 +354,11 @@ class GsCodeGenerator
                 instructions ~= GsInstruction(GsInstructionType.SYNC);
                 break;
             
+            case NodeType.EscapeExpression:
+                instructions ~= generate(node.children[0]);
+                instructions ~= GsInstruction(GsInstructionType.ESCAPE);
+                break;
+            
             case NodeType.LetStatement:
                 string varName = node.value;
                 node.programScope.defineVariable(varName);
@@ -426,8 +431,9 @@ class GsCodeGenerator
                 {
                     // Use builtin
                     instructions ~= GsInstruction(GsInstructionType.GLOBAL);
-                    instructions ~= GsInstruction(GsInstructionType.GET, GsDynamic("array"));
+                    instructions ~= GsInstruction(GsInstructionType.GET, GsDynamic("builtins"));
                     instructions ~= GsInstruction(GsInstructionType.GET, GsDynamic(node.value));
+                    instructions ~= GsInstruction(GsInstructionType.BORROW);
                 }
                 else
                 {

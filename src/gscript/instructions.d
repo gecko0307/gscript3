@@ -85,7 +85,9 @@ enum GsInstructionType: ubyte
     SPAWN = 48,        // SPAWN N            - pop a subroutine name and spawn a new thread that runs this subroutine
     AWAIT = 49,        // AWAIT              - pop a thread object and wait until it yields or terminates
     SYNC = 50,         // SYNC               
-    YIELD = 51         // YIELD              
+    YIELD = 51,        // YIELD              
+    BORROW = 52,       // BORROW             - pop a value, set its owner to the current thread, and push back
+    ESCAPE = 53        // ESCAPE             - pop a value, set its owner to the main thread, and push back
 }
 
 enum GsOperandType: ubyte

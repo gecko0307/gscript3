@@ -42,7 +42,7 @@ import dlib.container.dict;
 import gscript.arena;
 import gscript.instructions;
 import gscript.dynamic;
-import gscript.stdlib.array;
+import gscript.stdlib.builtins;
 import gscript.stdlib.str;
 import gscript.stdlib.io;
 import gscript.stdlib.time;
@@ -138,7 +138,7 @@ class GsVirtualMachine: Owner, GsObject
     Dict!(size_t, string) jumpTable;  // Function table mapping names to instruction indices
     
     // Standard library
-    GsGlobalArray globArray;
+    GsGlobalBuiltins globBuiltins;
     GsGlobalStr globStr;
     GsGlobalIO globIO;
     GsGlobalTime globTime;
@@ -163,8 +163,8 @@ class GsVirtualMachine: Owner, GsObject
         
         globals = dict!(GsDynamic, string);
         
-        globArray = heap.create!GsGlobalArray(heap);
-        globals["array"] = GsDynamic(globArray);
+        globBuiltins = heap.create!GsGlobalBuiltins(heap);
+        globals["builtins"] = GsDynamic(globBuiltins);
         
         globStr = heap.create!GsGlobalStr(heap);
         globals["string"] = GsDynamic(globStr);
@@ -736,7 +736,19 @@ class GsVirtualMachine: Owner, GsObject
                         writeln(tr.pop());
                         break;
                     case GsInstructionType.GLOBAL:
-                        tr.push(GsDynamic(this));
+                        GsDynamic value = GsDynamic(this);
+                        value.owner = mainThread;
+                        tr.push(value);
+                        break;
+                    case GsInstructionType.BORROW:
+                        GsDynamic value = tr.pop();
+                        value.owner = tr;
+                        tr.push(value);
+                        break;
+                    case GsInstructionType.ESCAPE:
+                        GsDynamic value = tr.pop();
+                        value.owner = mainThread;
+                        tr.push(value);
                         break;
                     case GsInstructionType.ARRAY:
                         uint region = cast(uint)instruction.operand.asNumber;
@@ -803,14 +815,18 @@ class GsVirtualMachine: Owner, GsObject
                                                 value.type == GsDynamicType.String ||
                                                 value.type == GsDynamicType.Array)
                                             {
-                                                allow = tr is mainThread || value.owner is null || value.owner is mainThread;
+                                                allow = 
+                                                    tr is mainThread || 
+                                                    value.owner is null || 
+                                                    value.owner is mainThread ||
+                                                    func.owner is tr;
                                             }
                                             
                                             if (allow)
                                                 tr.callFrame.parameters[numParams - 1 - pi] = value;
                                             else
                                             {
-                                                fatality("Fatality: escaping thread-local reference");
+                                                fatality("Fatality: escaping thread-local reference (use \"escape\" if intended)");
                                                 return;
                                             }
                                         }
@@ -852,14 +868,18 @@ class GsVirtualMachine: Owner, GsObject
                                     value.type == GsDynamicType.String ||
                                     value.type == GsDynamicType.Array)
                                 {
-                                    allow = tr is mainThread || value.owner is null || value.owner is mainThread;
+                                    allow = 
+                                        tr is mainThread || 
+                                        value.owner is null || 
+                                        value.owner is mainThread ||
+                                        func.owner is tr;
                                 }
                                 
                                 if (allow)
                                     tr.callFrame.parameters[numParams - 1 - pi] = value;
                                 else
                                 {
-                                    fatality("Fatality: escaping thread-local reference");
+                                    fatality("Fatality: escaping thread-local reference (use \"escape\" if intended)");
                                     return;
                                 }
                             }
@@ -988,7 +1008,9 @@ class GsVirtualMachine: Owner, GsObject
                         auto storageObj = tr.pop();
                         if (storageObj.type == GsDynamicType.Object)
                         {
-                            tr.push(storageObj.asObject.get(key));
+                            GsDynamic value = storageObj.asObject.get(key);
+                            value.owner = storageObj.owner;
+                            tr.push(value);
                         }
                         else
                         {
@@ -1017,7 +1039,7 @@ class GsVirtualMachine: Owner, GsObject
                                 }
                                 else
                                 {
-                                    fatality("Fatality: escaping thread-local reference");
+                                    fatality("Fatality: escaping thread-local reference (use \"escape\" if intended)");
                                     return;
                                 }
                             }
@@ -1054,7 +1076,7 @@ class GsVirtualMachine: Owner, GsObject
                                 }
                                 else
                                 {
-                                    fatality("Fatality: escaping thread-local reference");
+                                    fatality("Fatality: escaping thread-local reference (use \"escape\" if intended)");
                                     return;
                                 }
                             }
@@ -1238,7 +1260,7 @@ class GsVirtualMachine: Owner, GsObject
                         tr.finalize();
                         break;
                     default:
-                        fatality("Fatality: unknown instruction: ", instruction.type);
+                        fatality("Fatality: unknown instruction: %s", instruction.type);
                         return;
                 }
                 

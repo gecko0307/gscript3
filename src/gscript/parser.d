@@ -74,7 +74,8 @@ enum NodeType
     AwaitExpression,
     SyncExpression,
     ParametersExpression,
-    SharedExpression
+    SharedExpression,
+    EscapeExpression
 }
 
 immutable string[] assignOperators = [
@@ -586,21 +587,6 @@ class GsParser
     */
     ASTNode parseExpression()
     {
-        /*
-        ASTNode left = parseAssignExpression();
-
-        if (currentToken.value == "~")
-        {
-            string op = currentToken.value;
-            eat(GsTokenType.Operator);
-            ASTNode right = parseExpression();
-            left = new ASTNode(NodeType.BinaryExpression, op, [left, right]);
-            left.programScope = program.peekScope();
-        }
-
-        return left;
-        */
-        
         return parseAssignExpression();
     }
     
@@ -934,6 +920,14 @@ class GsParser
             sharedExpr.programScope = program.peekScope();
             return sharedExpr;
         }
+        else if (currentToken.value == "escape")
+        {
+            eat(GsTokenType.Keyword); // "escape"
+            ASTNode escapeValueExpr = parseExpression();
+            auto escapeExpr = new ASTNode(NodeType.EscapeExpression, "", [escapeValueExpr]);
+            escapeExpr.programScope = program.peekScope();
+            return escapeExpr;
+        }
         else if (currentToken.type == GsTokenType.Identifier)
         {
             string name = currentToken.value;
@@ -1197,7 +1191,12 @@ class GsParser
         else if (currentToken.value == "return")
         {
             eat(GsTokenType.Keyword); // "return"
-            ASTNode returnExpr = parseExpression();
+            ASTNode returnExpr;
+            if (currentToken.type != GsTokenType.Semicolon)
+                returnExpr = parseExpression();
+            else
+                // return null by default
+                returnExpr = new ASTNode(NodeType.NullLiteral, "");
             eat(GsTokenType.Semicolon); // ";"
             auto stat = new ASTNode(NodeType.ReturnStatement, "", [returnExpr]);
             stat.programScope = program.peekScope();
@@ -1206,7 +1205,12 @@ class GsParser
         else if (currentToken.value == "yield")
         {
             eat(GsTokenType.Keyword); // "yield"
-            ASTNode returnExpr = parseExpression();
+            ASTNode returnExpr;
+            if (currentToken.type != GsTokenType.Semicolon)
+                returnExpr = parseExpression();
+            else
+                // yield null by default
+                returnExpr = new ASTNode(NodeType.NullLiteral, "");
             eat(GsTokenType.Semicolon); // ";"
             auto stat = new ASTNode(NodeType.YieldStatement, "", [returnExpr]);
             stat.programScope = program.peekScope();

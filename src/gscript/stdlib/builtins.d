@@ -25,13 +25,13 @@ FOR ANY DAMAGES OR OTHER LIABILITY, WHETHER IN CONTRACT, TORT OR OTHERWISE,
 ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 */
-module gscript.stdlib.array;
+module gscript.stdlib.builtins;
 
 import gscript.arena;
 import gscript.dynamic;
 import gscript.vm;
 
-class GsGlobalArray: GsArenaObject
+class GsGlobalBuiltins: GsArenaObject
 {
     this(GsArena arena)
     {
@@ -64,7 +64,9 @@ class GsGlobalArray: GsArenaObject
             else if (i > removeIndex)
                 newArr[i - 1] = arr[i];
         }
-        return GsDynamic(newArr);
+        GsDynamic result = GsDynamic(newArr);
+        result.owner = args[1].owner;
+        return result;
     }
     
     GsDynamic mRemoveFront(GsDynamic[] args)
@@ -84,7 +86,9 @@ class GsGlobalArray: GsArenaObject
         {
             newArr[i - 1] = arr[i];
         }
-        return GsDynamic(newArr);
+        GsDynamic result = GsDynamic(newArr);
+        result.owner = args[1].owner;
+        return result;
     }
     
     GsDynamic mRemoveBack(GsDynamic[] args)
@@ -104,7 +108,9 @@ class GsGlobalArray: GsArenaObject
         {
             newArr[i] = arr[i];
         }
-        return GsDynamic(newArr);
+        GsDynamic result = GsDynamic(newArr);
+        result.owner = args[1].owner;
+        return result;
     }
     
     GsDynamic mInsert(GsDynamic[] args)
@@ -132,7 +138,9 @@ class GsGlobalArray: GsArenaObject
             else
                 newArr[i] = arr[i - 1];
         }
-        return GsDynamic(newArr);
+        GsDynamic result = GsDynamic(newArr);
+        result.owner = args[1].owner;
+        return result;
     }
     
     GsDynamic mSlice(GsDynamic[] args)
@@ -153,9 +161,12 @@ class GsGlobalArray: GsArenaObject
         if (sliceEndIndex < sliceStartIndex || sliceEndIndex > arr.length)
             return args[1];
         
+        GsDynamic result;
         if (sliceEndIndex == sliceStartIndex)
-            return GsDynamic([]);
+            result = GsDynamic([]);
         else
-            return GsDynamic(arr[sliceStartIndex..sliceEndIndex]);
+            result = GsDynamic(arr[sliceStartIndex..sliceEndIndex]);
+        result.owner = args[1].owner;
+        return result;
     }
 }
