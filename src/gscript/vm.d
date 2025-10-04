@@ -126,6 +126,7 @@ class GsArenaObject: GsObject
 
 struct GsCallFrame
 {
+    string name = "<global>";
     GsDynamic[128] parameters;
     GsDynamic[128] localVariables;
     size_t numParameters;
@@ -231,8 +232,16 @@ class GsVirtualMachine: Owner, GsObject
     
     void fatality(A...)(string fmt, A args)
     {
+        writeln("Thread fatality");
+        for (size_t tracei = 0; tracei < currentThread.cp + 1; tracei++)
+        {
+            writefln("  in \"%s\":", currentThread.callFrames[tracei].name);
+        }
         writefln(fmt, args);
-        finalize();
+        if (currentThread is mainThread)
+            finalize();
+        else
+            currentThread.finalize();
     }
     
     GsObject createObject()
@@ -425,8 +434,8 @@ class GsVirtualMachine: Owner, GsObject
                             tr.push(GsDynamic(a.asNumber + b.asNumber));
                         else
                         {
-                            fatality("Fatality: addition of %s and %s", a.type, b.type);
-                            return;
+                            fatality("Addition of %s and %s", a.type, b.type);
+                            //return;
                         }
                         break;
                     case GsInstructionType.SUB:
@@ -436,8 +445,8 @@ class GsVirtualMachine: Owner, GsObject
                             tr.push(GsDynamic(a.asNumber - b.asNumber));
                         else
                         {
-                            fatality("Fatality: subtraction of %s and %s", a.type, b.type);
-                            return;
+                            fatality("Subtraction of %s and %s", a.type, b.type);
+                            //return;
                         }
                         break;
                     case GsInstructionType.MUL:
@@ -447,8 +456,8 @@ class GsVirtualMachine: Owner, GsObject
                             tr.push(GsDynamic(a.asNumber * b.asNumber));
                         else
                         {
-                            fatality("Fatality: multiplication of %s and %s", a.type, b.type);
-                            return;
+                            fatality("Multiplication of %s and %s", a.type, b.type);
+                            //return;
                         }
                         break;
                     case GsInstructionType.DIV:
@@ -458,8 +467,8 @@ class GsVirtualMachine: Owner, GsObject
                             tr.push(GsDynamic(a.asNumber / b.asNumber));
                         else
                         {
-                            fatality("Fatality: division of %s and %s", a.type, b.type);
-                            return;
+                            fatality("Division of %s and %s", a.type, b.type);
+                            //return;
                         }
                         break;
                     case GsInstructionType.NEG:
@@ -468,8 +477,8 @@ class GsVirtualMachine: Owner, GsObject
                             tr.push(GsDynamic(-a.asNumber));
                         else
                         {
-                            fatality("Fatality: negation of %s", a.type);
-                            return;
+                            fatality("Negation of %s", a.type);
+                            //return;
                         }
                         break;
                     case GsInstructionType.MOD:
@@ -479,8 +488,8 @@ class GsVirtualMachine: Owner, GsObject
                             tr.push(GsDynamic(a.asNumber % b.asNumber));
                         else
                         {
-                            fatality("Fatality: modulo of %s and %s", a.type, b.type);
-                            return;
+                            fatality("Modulo of %s and %s", a.type, b.type);
+                            //return;
                         }
                         break;
                     case GsInstructionType.POW:
@@ -490,8 +499,8 @@ class GsVirtualMachine: Owner, GsObject
                             tr.push(GsDynamic(a.asNumber ^^ b.asNumber));
                         else
                         {
-                            fatality("Fatality: power of %s and %s", a.type, b.type);
-                            return;
+                            fatality("Power of %s and %s", a.type, b.type);
+                            //return;
                         }
                         break;
                     case GsInstructionType.BITWISE_AND:
@@ -501,8 +510,8 @@ class GsVirtualMachine: Owner, GsObject
                             tr.push(GsDynamic(cast(long)a.asNumber & cast(long)b.asNumber));
                         else
                         {
-                            fatality("Fatality: bitwise AND of %s and %s", a.type, b.type);
-                            return;
+                            fatality("Bitwise AND of %s and %s", a.type, b.type);
+                            //return;
                         }
                         break;
                     case GsInstructionType.BITWISE_OR:
@@ -512,8 +521,8 @@ class GsVirtualMachine: Owner, GsObject
                             tr.push(GsDynamic(cast(long)a.asNumber | cast(long)b.asNumber));
                         else
                         {
-                            fatality("Fatality: bitwise OR of %s and %s", a.type, b.type);
-                            return;
+                            fatality("Bitwise OR of %s and %s", a.type, b.type);
+                            //return;
                         }
                         break;
                     case GsInstructionType.BITWISE_XOR:
@@ -523,8 +532,8 @@ class GsVirtualMachine: Owner, GsObject
                             tr.push(GsDynamic(cast(long)a.asNumber ^ cast(long)b.asNumber));
                         else
                         {
-                            fatality("Fatality: bitwise XOR of %s and %s", a.type, b.type);
-                            return;
+                            fatality("Bitwise XOR of %s and %s", a.type, b.type);
+                            //return;
                         }
                         break;
                     case GsInstructionType.AND:
@@ -534,8 +543,8 @@ class GsVirtualMachine: Owner, GsObject
                             tr.push(GsDynamic(a.asNumber && b.asNumber));
                         else
                         {
-                            fatality("Fatality: logical AND of %s and %s", a.type, b.type);
-                            return;
+                            fatality("Logical AND of %s and %s", a.type, b.type);
+                            //return;
                         }
                         break;
                     case GsInstructionType.OR:
@@ -545,8 +554,8 @@ class GsVirtualMachine: Owner, GsObject
                             tr.push(GsDynamic(a.asNumber || b.asNumber));
                         else
                         {
-                            fatality("Fatality: logical OR of %s and %s", a.type, b.type);
-                            return;
+                            fatality("Logical OR of %s and %s", a.type, b.type);
+                            //return;
                         }
                         break;
                     case GsInstructionType.NOT:
@@ -555,8 +564,8 @@ class GsVirtualMachine: Owner, GsObject
                             tr.push(GsDynamic(!a.asNumber));
                         else
                         {
-                            fatality("Fatality: logical NOT of %s", a.type);
-                            return;
+                            fatality("Logical NOT of %s", a.type);
+                            //return;
                         }
                         break;
                     case GsInstructionType.CAT:
@@ -699,8 +708,9 @@ class GsVirtualMachine: Owner, GsObject
                             }
                             else
                             {
-                                fatality("Fatality: index is outside array capability");
-                                return;
+                                fatality("Index is outside array capability");
+                                //return;
+                                break;
                             }
                         }
                         else if (arrayParam.type == GsDynamicType.String)
@@ -713,14 +723,16 @@ class GsVirtualMachine: Owner, GsObject
                             }
                             else
                             {
-                                fatality("Fatality: index is outside string length");
-                                return;
+                                fatality("Index is outside string length");
+                                //return;
+                                break;
                             }
                         }
                         else
                         {
-                            fatality("Fatality: attempting to index %s which is not an array", arrayParam.type);
-                            return;
+                            fatality("Attempting to index %s which is not an array", arrayParam.type);
+                            //return;
+                            break;
                         }
                     case GsInstructionType.INDEX_SET:
                         size_t index = cast(size_t)tr.pop().asNumber;
@@ -743,8 +755,9 @@ class GsVirtualMachine: Owner, GsObject
                                     }
                                     else
                                     {
-                                        fatality("Fatality: escaping thread-local reference (use \"escape\" if intended)");
-                                        return;
+                                        fatality("Escaping thread-local reference (use \"escape\" if intended)");
+                                        //return;
+                                        break;
                                     }
                                 }
                                 else
@@ -754,16 +767,18 @@ class GsVirtualMachine: Owner, GsObject
                             }
                             else
                             {
-                                fatality("Fatality: index is outside array capability");
-                                return;
+                                fatality("Index is outside array capability");
+                                //return;
+                                break;
                             }
                             tr.push(value);
                             break;
                         }
                         else
                         {
-                            fatality("Fatality: attempting to index %s which is not an array", arrayParam.type);
-                            return;
+                            fatality("Attempting to index %s which is not an array", arrayParam.type);
+                            //return;
+                            break;
                         }
                     case GsInstructionType.LENGTH:
                         auto param = tr.pop();
@@ -914,14 +929,16 @@ class GsVirtualMachine: Owner, GsObject
                                                 tr.callFrame.parameters[numParams - 1 - pi] = value;
                                             else
                                             {
-                                                fatality("Fatality: escaping thread-local reference (use \"escape\" if intended)");
-                                                return;
+                                                fatality("Escaping thread-local reference (use \"escape\" if intended)");
+                                                //return;
+                                                break;
                                             }
                                         }
                                         else
                                             tr.callFrame.parameters[pi] = GsDynamic();
                                     }
                                     tr.callFrame.numParameters = numParams;
+                                    tr.callFrame.name = funcName;
                                     
                                     tr.ip = jumpTable[funcName]; // Jump to the function's starting instruction
                                     
@@ -931,14 +948,16 @@ class GsVirtualMachine: Owner, GsObject
                                 }
                                 else
                                 {
-                                    fatality("Fatality: undefined jump label \"%s\"", funcName);
-                                    return;
+                                    fatality("Undefined jump label \"%s\"", funcName);
+                                    //return;
+                                    break;
                                 }
                             }
                             else
                             {
-                                fatality("Fatality: attempting to call %s, which is not a function", func.type);
-                                return;
+                                fatality("Attempting to call %s, which is not a function", func.type);
+                                //return;
+                                break;
                             }
                         }
                         
@@ -967,14 +986,16 @@ class GsVirtualMachine: Owner, GsObject
                                     tr.callFrame.parameters[numParams - 1 - pi] = value;
                                 else
                                 {
-                                    fatality("Fatality: escaping thread-local reference (use \"escape\" if intended)");
-                                    return;
+                                    fatality("Escaping thread-local reference (use \"escape\" if intended)");
+                                    //return;
+                                    break;
                                 }
                             }
                             else
                                 tr.callFrame.parameters[pi] = GsDynamic();
                         }
                         tr.callFrame.numParameters = numParams;
+                        tr.callFrame.name = "<native function>";
                         
                         GsDynamic result;
                         if (useNativeMethod)
@@ -1051,8 +1072,9 @@ class GsVirtualMachine: Owner, GsObject
                             }
                             else
                             {
-                                fatality("Fatality: escaping thread-local reference (use \"escape\" if intended)");
-                                return;
+                                fatality("Escaping thread-local reference (use \"escape\" if intended)");
+                                //return;
+                                break;
                             }
                         }
                         else
@@ -1106,8 +1128,8 @@ class GsVirtualMachine: Owner, GsObject
                         }
                         else
                         {
-                            fatality("Fatality: attempting to reuse ", param.type);
-                            return;
+                            fatality("Attempting to reuse ", param.type);
+                            //return;
                         }
                         break;
                     case GsInstructionType.GET:
@@ -1121,8 +1143,8 @@ class GsVirtualMachine: Owner, GsObject
                         }
                         else
                         {
-                            fatality("Fatality: attempting to read member \"%s\" of %s", key, storageObj.type);
-                            return;
+                            fatality("Attempting to read member \"%s\" of %s", key, storageObj.type);
+                            //return;
                         }
                         break;
                     case GsInstructionType.SET:
@@ -1146,8 +1168,9 @@ class GsVirtualMachine: Owner, GsObject
                                 }
                                 else
                                 {
-                                    fatality("Fatality: escaping thread-local reference (use \"escape\" if intended)");
-                                    return;
+                                    fatality("Escaping thread-local reference (use \"escape\" if intended)");
+                                    //return;
+                                    break;
                                 }
                             }
                             else
@@ -1159,8 +1182,8 @@ class GsVirtualMachine: Owner, GsObject
                         }
                         else
                         {
-                            fatality("Fatality: attempting to write member \"%s\" of %s", key, storageObj.type);
-                            return;
+                            fatality("Attempting to write member \"%s\" of %s", key, storageObj.type);
+                            //return;
                         }
                         break;
                     case GsInstructionType.INIT_SET:
@@ -1183,8 +1206,9 @@ class GsVirtualMachine: Owner, GsObject
                                 }
                                 else
                                 {
-                                    fatality("Fatality: escaping thread-local reference (use \"escape\" if intended)");
-                                    return;
+                                    fatality("Escaping thread-local reference (use \"escape\" if intended)");
+                                    //return;
+                                    break;
                                 }
                             }
                             else
@@ -1195,8 +1219,8 @@ class GsVirtualMachine: Owner, GsObject
                         }
                         else
                         {
-                            fatality("Fatality: attempting to write member \"%s\" of %s", key, storageObj.type);
-                            return;
+                            fatality("Attempting to write member \"%s\" of %s", key, storageObj.type);
+                            //return;
                         }
                         break;
                     case GsInstructionType.CONTAINS:
@@ -1208,8 +1232,8 @@ class GsVirtualMachine: Owner, GsObject
                         }
                         else
                         {
-                            fatality("Fatality: attempting to read member \"%s\" of %s", key, storageObj.type);
-                            return;
+                            fatality("Attempting to read member \"%s\" of %s", key, storageObj.type);
+                            //return;
                         }
                         break;
                     case GsInstructionType.SPAWN:
@@ -1228,8 +1252,9 @@ class GsVirtualMachine: Owner, GsObject
                                 }
                                 else if (payloadParam.type != GsDynamicType.Null)
                                 {
-                                    fatality("Fatality: attempting to payload a thread with %s, which is not an object", payloadParam.type);
-                                    return;
+                                    fatality("Attempting to payload a thread with %s, which is not an object", payloadParam.type);
+                                    //return;
+                                    break;
                                 }
                                 
                                 GsThread newThread;
@@ -1276,6 +1301,7 @@ class GsVirtualMachine: Owner, GsObject
                                     cf.parameters[pi] = GsDynamic();
                                 }
                                 cf.numParameters = numParams + 1;
+                                cf.name = jumpLabel;
                                 
                                 newThread.start(jumpTable[jumpLabel], 0);
                                 numActiveThreads++;
@@ -1284,14 +1310,14 @@ class GsVirtualMachine: Owner, GsObject
                             }
                             else
                             {
-                                fatality("Fatality: unknown jump label %s", jumpLabel);
-                                return;
+                                fatality("Unknown jump label %s", jumpLabel);
+                                //return;
                             }
                         }
                         else
                         {
-                            fatality("Fatality: attempting to spawn %s, which is not a function", func.type);
-                            return;
+                            fatality("Attempting to spawn %s, which is not a function", func.type);
+                            //return;
                         }
                         break;
                     case GsInstructionType.AWAIT:
@@ -1320,14 +1346,14 @@ class GsVirtualMachine: Owner, GsObject
                             }
                             else
                             {
-                                fatality("Fatality: attempting to await non-thread object", param.type);
-                                return;
+                                fatality("Attempting to await non-thread object", param.type);
+                                //return;
                             }
                         }
                         else
                         {
-                            fatality("Fatality: attempting to await %s, which is not a thread", param.type);
-                            return;
+                            fatality("Attempting to await %s, which is not a thread", param.type);
+                            //return;
                         }
                         break;
                     case GsInstructionType.SYNC:
@@ -1353,22 +1379,23 @@ class GsVirtualMachine: Owner, GsObject
                             }
                             else
                             {
-                                fatality("Fatality: attempting to sync non-thread object", param.type);
-                                return;
+                                fatality("Attempting to sync non-thread object", param.type);
+                                //return;
                             }
                         }
                         else
                         {
-                            fatality("Fatality: attempting to sync %s, which is not a thread", param.type);
-                            return;
+                            fatality("Attempting to sync %s, which is not a thread", param.type);
+                            //return;
                         }
                         break;
                     case GsInstructionType.HALT:
                         tr.finalize();
                         break;
                     default:
-                        fatality("Fatality: unknown instruction: %s", instruction.type);
-                        return;
+                        fatality("Unsupported instruction: %s", instruction.type);
+                        //return;
+                        break;
                 }
                 
                 tr = tr.next;
@@ -1392,7 +1419,6 @@ enum GsThreadStatus
 
 class GsThread: Owner, GsObject
 {
-  protected:
     GsVirtualMachine vm;
     GsObject payload;
     GsDynamic[] stack;
@@ -1403,7 +1429,6 @@ class GsThread: Owner, GsObject
     size_t cp;                     // Call stack pointer
     size_t callDepth = 1;
     
-  public:
     GsArena heap;
     GsCallFrame* callFrame;        // Current call frame
     
@@ -1484,27 +1509,32 @@ class GsThread: Owner, GsObject
     {
         if (sp == 0)
         {
-            vm.fatality("Fatality: stack underflow");
+            vm.fatality("Stack underflow");
+            return GsDynamic();
         }
-        return stack[--sp];
+        else
+            return stack[--sp];
     }
 
     GsDynamic peek()
     {
         if (sp == 0)
         {
-            vm.fatality("Fatality: stack is empty");
+            vm.fatality("Stack is empty");
+            return GsDynamic();
         }
-        return stack[sp - 1];
+        else
+            return stack[sp - 1];
     }
 
     void push(GsDynamic value)
     {
         if (sp >= stack.length)
         {
-            vm.fatality("Fatality: stack overflow");
+            vm.fatality("Stack overflow");
         }
-        stack[sp++] = value;
+        else
+            stack[sp++] = value;
     }
     
     GsObject createObject()
