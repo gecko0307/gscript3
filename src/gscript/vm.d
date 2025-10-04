@@ -539,31 +539,87 @@ class GsVirtualMachine: Owner, GsObject
                     case GsInstructionType.CAT:
                         auto b = tr.pop();
                         auto a = tr.pop();
+                        uint region = cast(uint)instruction.operand.asNumber;
                         if (a.type == GsDynamicType.String && b.type == GsDynamicType.String)
                         {
-                            tr.push(GsDynamic(heap.cat(a.toString(), b.toString())));
+                            GsDynamic result;
+                            if (region == 0)
+                            {
+                                result = GsDynamic(heap.cat(a.toString(), b.toString()));
+                                result.owner = mainThread;
+                            }
+                            else
+                            {
+                                result = GsDynamic(tr.heap.cat(a.toString(), b.toString()));
+                                result.owner = tr;
+                            }
+                            tr.push(result);
                         }
                         else if (a.type == GsDynamicType.Array && b.type == GsDynamicType.Array)
                         {
-                            GsDynamic[] newArr = heap.cat(a.asArray, b.asArray);
-                            tr.push(GsDynamic(newArr));
+                            GsDynamic result;
+                            if (region == 0)
+                            {
+                                result = GsDynamic(heap.cat(a.asArray, b.asArray));
+                                result.owner = mainThread;
+                            }
+                            else
+                            {
+                                result = GsDynamic(tr.heap.cat(a.asArray, b.asArray));
+                                result.owner = tr;
+                            }
+                            tr.push(result);
                         }
                         else if (a.type == GsDynamicType.Array && b.type != GsDynamicType.Array)
                         {
-                            GsDynamic[] newArr = heap.cat(a.asArray, b);
-                            tr.push(GsDynamic(newArr));
+                            GsDynamic result;
+                            if (region == 0)
+                            {
+                                result = GsDynamic(heap.cat(a.asArray, b));
+                                result.owner = mainThread;
+                            }
+                            else
+                            {
+                                result = GsDynamic(tr.heap.cat(a.asArray, b));
+                                result.owner = tr;
+                            }
+                            tr.push(result);
                         }
                         else if (a.type != GsDynamicType.Array && b.type == GsDynamicType.Array)
                         {
-                            GsDynamic[] newArr = heap.cat(a, b.asArray);
-                            tr.push(GsDynamic(newArr));
+                            GsDynamic result;
+                            if (region == 0)
+                            {
+                                result = GsDynamic(heap.cat(a, b.asArray));
+                                result.owner = mainThread;
+                            }
+                            else
+                            {
+                                result = GsDynamic(tr.heap.cat(a, b.asArray));
+                                result.owner = tr;
+                            }
+                            tr.push(result);
                         }
                         else
                         {
-                            GsDynamic[] newArr = heap.create!(GsDynamic[])(2);
-                            newArr[0] = a;
-                            newArr[0] = b;
-                            tr.push(GsDynamic(newArr));
+                            GsDynamic result;
+                            if (region == 0)
+                            {
+                                GsDynamic[] newArr = heap.create!(GsDynamic[])(2);
+                                newArr[0] = a;
+                                newArr[0] = b;
+                                result = GsDynamic(newArr);
+                                result.owner = mainThread;
+                            }
+                            else
+                            {
+                                GsDynamic[] newArr = tr.heap.create!(GsDynamic[])(2);
+                                newArr[0] = a;
+                                newArr[0] = b;
+                                result = GsDynamic(newArr);
+                                result.owner = tr;
+                            }
+                            tr.push(result);
                         }
                         break;
                     case GsInstructionType.EQ:
@@ -683,13 +739,27 @@ class GsVirtualMachine: Owner, GsObject
                         tr.push(GsDynamic(this));
                         break;
                     case GsInstructionType.ARRAY:
+                        uint region = cast(uint)instruction.operand.asNumber;
                         size_t len = cast(size_t)tr.pop().asNumber;
-                        auto arr = createArray(len);
+                        GsDynamic[] arr;
+                        GsObject owner;
+                        if (region == 0)
+                        {
+                            arr = createArray(len);
+                            owner = mainThread;
+                        }
+                        else
+                        {
+                            arr = tr.createArray(len);
+                            owner = tr;
+                        }
                         for (size_t ai = 0; ai < len; ai++)
                         {
                             arr[$ - 1 - ai] = tr.pop();
                         }
-                        tr.push(GsDynamic(arr));
+                        GsDynamic result = GsDynamic(arr);
+                        result.owner = owner;
+                        tr.push(result);
                         break;
                     case GsInstructionType.CALL:
                         size_t numParams = cast(size_t)instruction.operand.asNumber;
@@ -832,77 +902,148 @@ class GsVirtualMachine: Owner, GsObject
                         tr.push(mainThread.callFrames[0].localVariables[vIndex]); // Load a global variable onto the stack
                         break;
                     case GsInstructionType.NEW:
-                        auto obj = createObject();
-                        tr.push(GsDynamic(obj));
-                        break;
-                    case GsInstructionType.REUSE:
-                        auto param = tr.pop();
-                        if (param.type == GsDynamicType.Object)
+                        uint region = cast(uint)instruction.operand.asNumber;
+                        GsObject obj;
+                        GsObject owner;
+                        if (region == 0)
                         {
-                            auto newObj = createObject();
-                            newObj.setPrototype(param.asObject);
-                            tr.push(GsDynamic(newObj));
+                            obj = createObject();
+                            owner = mainThread;
                         }
                         else
                         {
-                            fatality("Fatality: attempting to reuse non-object");
+                            obj = tr.createObject();
+                            owner = tr;
+                        }
+                        GsDynamic result = GsDynamic(obj);
+                        result.owner = owner;
+                        tr.push(result);
+                        break;
+                    case GsInstructionType.REUSE:
+                        uint region = cast(uint)instruction.operand.asNumber;
+                        auto param = tr.pop();
+                        if (param.type == GsDynamicType.Object)
+                        {
+                            GsObject newObj;
+                            GsObject owner;
+                            if (region == 0)
+                            {
+                                newObj = createObject();
+                                owner = mainThread;
+                            }
+                            else
+                            {
+                                newObj = tr.createObject();
+                                owner = tr;
+                            }
+                            newObj.setPrototype(param.asObject);
+                            GsDynamic result = GsDynamic(newObj);
+                            result.owner = owner;
+                            tr.push(result);
+                        }
+                        else
+                        {
+                            fatality("Fatality: attempting to reuse ", param.type);
                             return;
                         }
                         break;
                     case GsInstructionType.GET:
                         auto key = instruction.operand.asString;
-                        auto param = tr.pop();
-                        if (param.type == GsDynamicType.Object)
+                        auto storageObj = tr.pop();
+                        if (storageObj.type == GsDynamicType.Object)
                         {
-                            tr.push(param.asObject.get(key));
+                            tr.push(storageObj.asObject.get(key));
                         }
                         else
                         {
-                            fatality("Fatality: attempting to read member \"", key, "\" of non-object");
+                            fatality("Fatality: attempting to read member \"%s\" of %s", key, storageObj.type);
                             return;
                         }
                         break;
                     case GsInstructionType.SET:
                         auto key = instruction.operand.asString;
-                        auto param = tr.pop();
+                        auto storageObj = tr.pop();
                         auto value = tr.pop();
-                        if (param.type == GsDynamicType.Object)
+                        if (storageObj.type == GsDynamicType.Object)
                         {
-                            param.asObject.set(key, value);
-                            tr.push(value);
-                            break;
+                            if (value.type == GsDynamicType.Object ||
+                                value.type == GsDynamicType.String ||
+                                value.type == GsDynamicType.Array)
+                            {
+                                if (value.owner is null || 
+                                    value.owner is mainThread || 
+                                    value.owner is storageObj.asObject ||
+                                    value.owner is storageObj.owner)
+                                {
+                                    storageObj.asObject.set(key, value);
+                                    tr.push(value);
+                                    break;
+                                }
+                                else
+                                {
+                                    fatality("Fatality: escaping thread-local reference");
+                                    return;
+                                }
+                            }
+                            else
+                            {
+                                storageObj.asObject.set(key, value);
+                                tr.push(value);
+                                break;
+                            }
                         }
                         else
                         {
-                            fatality("Fatality: attempting to write member \"", key, "\" of non-object");
+                            fatality("Fatality: attempting to write member \"%s\" of %s", key, storageObj.type);
                             return;
                         }
                         break;
                     case GsInstructionType.INIT_SET:
                         auto key = instruction.operand.asString;
                         auto value = tr.pop();
-                        auto param = tr.peek();
-                        if (param.type == GsDynamicType.Object)
+                        auto storageObj = tr.peek();
+                        if (storageObj.type == GsDynamicType.Object)
                         {
-                            param.asObject.set(key, value);
-                            break;
+                            if (value.type == GsDynamicType.Object ||
+                                value.type == GsDynamicType.String ||
+                                value.type == GsDynamicType.Array)
+                            {
+                                if (value.owner is null || 
+                                    value.owner is mainThread || 
+                                    value.owner is storageObj.asObject ||
+                                    value.owner is storageObj.owner)
+                                {
+                                    storageObj.asObject.set(key, value);
+                                    break;
+                                }
+                                else
+                                {
+                                    fatality("Fatality: escaping thread-local reference");
+                                    return;
+                                }
+                            }
+                            else
+                            {
+                                storageObj.asObject.set(key, value);
+                                break;
+                            }
                         }
                         else
                         {
-                            fatality("Fatality: attempting to write member \"", key, "\" of non-object");
+                            fatality("Fatality: attempting to write member \"%s\" of %s", key, storageObj.type);
                             return;
                         }
                         break;
                     case GsInstructionType.CONTAINS:
                         auto key = instruction.operand.asString;
-                        auto param = tr.pop();
-                        if (param.type == GsDynamicType.Object)
+                        auto storageObj = tr.pop();
+                        if (storageObj.type == GsDynamicType.Object)
                         {
-                            tr.push(GsDynamic(param.asObject.contains(key)));
+                            tr.push(GsDynamic(storageObj.asObject.contains(key)));
                         }
                         else
                         {
-                            fatality("Fatality: attempting to read member \"", key, "\" of non-object");
+                            fatality("Fatality: attempting to read member \"%s\" of %s", key, storageObj.type);
                             return;
                         }
                         break;
@@ -926,9 +1067,6 @@ class GsVirtualMachine: Owner, GsObject
                                     return;
                                 }
                                 
-                                if (payload is null)
-                                    payload = createObject();
-                                
                                 GsThread newThread;
                                 
                                 // Look for a free thread
@@ -949,6 +1087,8 @@ class GsVirtualMachine: Owner, GsObject
                                     threads.append(newThread);
                                 }
                                 
+                                if (payload is null)
+                                    payload = newThread.createObject();
                                 newThread.setPayload(payload);
                                 
                                 // Add to linked list
@@ -1099,6 +1239,7 @@ class GsThread: Owner, GsObject
     size_t callDepth = 1;
     
   public:
+    GsArena heap;
     GsCallFrame* callFrame;        // Current call frame
     
     GsThreadStatus status;
@@ -1112,6 +1253,8 @@ class GsThread: Owner, GsObject
         super(vm);
         
         this.vm = vm;
+        
+        heap = New!GsArena(1024, this);
         
         stack = New!(GsDynamic[])(256);
         callStack = New!(size_t[])(256);
@@ -1199,6 +1342,16 @@ class GsThread: Owner, GsObject
         stack[sp++] = value;
     }
     
+    GsObject createObject()
+    {
+        return heap.create!GsArenaObject(heap);
+    }
+    
+    GsDynamic[] createArray(size_t len)
+    {
+        return heap.create!(GsDynamic[])(len);
+    }
+    
     void pause()
     {
         if (status == GsThreadStatus.Running)
@@ -1243,6 +1396,7 @@ class GsThread: Owner, GsObject
         callDepth = 1;
         payload = null;
         yieldValue = GsDynamic();
+        heap.reset();
         return GsDynamic();
     }
     

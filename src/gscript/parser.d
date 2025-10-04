@@ -73,7 +73,8 @@ enum NodeType
     SpawnExpression,
     AwaitExpression,
     SyncExpression,
-    ParametersExpression
+    ParametersExpression,
+    SharedExpression
 }
 
 immutable string[] assignOperators = [
@@ -315,6 +316,7 @@ class ASTNode
     ASTNode[] children;
     Scope programScope;
     bool isConst = false;
+    bool sharedAccess = false;
 
     this(NodeType type, string value, ASTNode[] children = [])
     {
@@ -584,6 +586,7 @@ class GsParser
     */
     ASTNode parseExpression()
     {
+        /*
         ASTNode left = parseAssignExpression();
 
         if (currentToken.value == "~")
@@ -596,6 +599,9 @@ class GsParser
         }
 
         return left;
+        */
+        
+        return parseAssignExpression();
     }
     
    /*
@@ -603,7 +609,7 @@ class GsParser
     */
     ASTNode parseAssignExpression()
     {
-        ASTNode left = parseLogicalExpression();
+        ASTNode left = parseCatExpression();
 
         while (isAssignment(currentToken))
         {
@@ -625,6 +631,25 @@ class GsParser
                 left = new ASTNode(NodeType.AssignExpression, "=", [left, right]);
                 left.programScope = program.peekScope();
             }
+        }
+
+        return left;
+    }
+    
+   /*
+    * a ~ b
+    */
+    ASTNode parseCatExpression()
+    {
+        ASTNode left = parseLogicalExpression();
+
+        if (currentToken.value == "~")
+        {
+            string op = currentToken.value;
+            eat(GsTokenType.Operator);
+            ASTNode right = parseCatExpression();
+            left = new ASTNode(NodeType.BinaryExpression, op, [left, right]);
+            left.programScope = program.peekScope();
         }
 
         return left;
@@ -900,6 +925,14 @@ class GsParser
             auto syncExpr = new ASTNode(NodeType.SyncExpression, "", [threadExpr]);
             syncExpr.programScope = program.peekScope();
             return syncExpr;
+        }
+        else if (currentToken.value == "shared")
+        {
+            eat(GsTokenType.Keyword); // "shared"
+            ASTNode sharedExpr = parseExpression();
+            sharedExpr.sharedAccess = true;
+            sharedExpr.programScope = program.peekScope();
+            return sharedExpr;
         }
         else if (currentToken.type == GsTokenType.Identifier)
         {

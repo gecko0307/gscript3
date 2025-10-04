@@ -94,7 +94,7 @@ class GsCodeGenerator
             // Function body
             instructions ~= generate(func.bodyBlock);
             
-            // Return undefined by default
+            // Return null by default
             instructions ~= GsInstruction(GsInstructionType.PUSH, GsDynamic());
             instructions ~= GsInstruction(GsInstructionType.RET);
         }
@@ -145,11 +145,13 @@ class GsCodeGenerator
                 foreach(child; node.children)
                     instructions ~= generate(child);
                 instructions ~= GsInstruction(GsInstructionType.PUSH, GsDynamic(node.children.length));
-                instructions ~= GsInstruction(GsInstructionType.ARRAY);
+                uint region = !node.sharedAccess;
+                instructions ~= GsInstruction(GsInstructionType.ARRAY, GsDynamic(cast(double)region));
                 break;
             
             case NodeType.ObjectLiteral:
-                instructions ~= GsInstruction(GsInstructionType.NEW);
+                uint region = !node.sharedAccess;
+                instructions ~= GsInstruction(GsInstructionType.NEW, GsDynamic(cast(double)region));
                 foreach(child; node.children)
                 {
                     string key = child.value;
@@ -266,7 +268,10 @@ class GsCodeGenerator
                     instructions ~= generate(node.children[1]);
                     GsInstructionType* instrTypePtr = op in binaryOperatorMap;
                     if (instrTypePtr)
-                        instructions ~= GsInstruction(*instrTypePtr);
+                    {
+                        uint region = !node.sharedAccess;
+                        instructions ~= GsInstruction(*instrTypePtr, GsDynamic(cast(double)region));
+                    }
                     else
                         throw new Exception("Unknown binary operator: " ~ op);
                 }
@@ -333,7 +338,7 @@ class GsCodeGenerator
                 else
                 {
                     // Implicitly create a new payload object
-                    instructions ~= GsInstruction(GsInstructionType.NEW);
+                    instructions ~= GsInstruction(GsInstructionType.NEW, GsDynamic(1.0));
                 }
                 instructions ~= generate(funcCall);
                 instructions ~= GsInstruction(GsInstructionType.SPAWN, GsDynamic(cast(double)numParameters));
@@ -436,7 +441,8 @@ class GsCodeGenerator
             
             case NodeType.NewExpression:
                 instructions ~= generate(node.children[0]);
-                instructions ~= GsInstruction(GsInstructionType.REUSE);
+                uint region = !node.sharedAccess;
+                instructions ~= GsInstruction(GsInstructionType.REUSE, GsDynamic(cast(double)region));
                 break;
             
             case NodeType.ArgumentExpression:
@@ -619,7 +625,7 @@ class GsCodeGenerator
                 if (node.type == NodeType.Function)
                 {
                     auto func = cast(ASTFunction)node;
-                    // TODO: qualified name
+                    
                     output ~= GsInstruction(GsInstructionType.LABEL, GsDynamic(func.name));
                     
                     // Function body
@@ -633,7 +639,7 @@ class GsCodeGenerator
                         return [];
                     }
                     
-                    // Return undefined by default
+                    // Return null by default
                     output ~= GsInstruction(GsInstructionType.PUSH, GsDynamic());
                     output ~= GsInstruction(GsInstructionType.RET);
                 }

@@ -110,7 +110,7 @@ void packStandalone(string interpreterPath, ubyte[] code, string outputPath)
     }
 }
 
-void buildProject(string exeDirectory, string inputFilename)
+void buildProject(string exeDirectory, string inputFilename, bool dump = false)
 {
     if (inputFilename.length == 0)
         inputFilename = "gsproject.json";
@@ -136,7 +136,7 @@ void buildProject(string exeDirectory, string inputFilename)
     ubyte[] code;
     if (extension(config.mainScript) == ".gs")
     {
-        // Load and compile source code
+        // Load and compile main script
         writefln("Compiling %s...", config.mainScript);
         string script = readText(config.mainScript);
         GsInstruction[] instructions = compile(script, config.mainScript);
@@ -148,6 +148,9 @@ void buildProject(string exeDirectory, string inputFilename)
         writefln("Loading %s...", config.mainScript);
         code = cast(ubyte[])std.file.read(config.mainScript);
     }
+    
+    if (dump)
+        writeln(code);
     
     if (code.length == 0)
         return;
@@ -201,6 +204,7 @@ void main(string[] args)
     bool saveCode = false;
     bool compileOnly = false;
     bool build = false;
+    bool dump = false;
     string inputFilename;
     string outputFilename;
     ubyte[] code;
@@ -220,7 +224,8 @@ void main(string[] args)
         "compile|c", "Compile script to bytecode without running", &compileOnly,
         "build|b", "Build standalone executable", &build,
         "output|o", "Output file", &outputFilename,
-        "input|i", "Input file (.gs, .gsc, .json)", &inputFilename
+        "input|i", "Input file (.gs, .gsc, .json)", &inputFilename,
+        "dump|d", "Dump bytecode", &dump
     );
     
     if (showHelp)
@@ -231,7 +236,7 @@ void main(string[] args)
     
     if (build)
     {
-        buildProject(exeDirectory, inputFilename);
+        buildProject(exeDirectory, inputFilename, dump);
         return;
     }
     
@@ -290,11 +295,11 @@ void main(string[] args)
     
     if (instructions.length == 0)
     {
-        writeln("No bytecode to run");
         return;
     }
     
-    debug writeln(instructions);
+    if (dump)
+        writeln(instructions);
     
     if (!compileOnly)
     {

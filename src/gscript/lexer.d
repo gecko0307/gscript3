@@ -129,7 +129,7 @@ class GsLexer
     string[] keywords = [
         "let", "const", "null", "new", "func", "return",
         "if", "else", "while", "for", "do", "break", "continue",
-        "spawn", "await", "sync", "yield",
+        "spawn", "await", "sync", "yield", "shared",
         "import", "from",
         "print"
     ];

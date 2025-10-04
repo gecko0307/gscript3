@@ -58,6 +58,8 @@ struct GsDynamic
         string asString;
     }
     
+    GsObject owner;
+    
     GsDynamicType type;
     uint payload;
     
@@ -99,6 +101,8 @@ struct GsDynamic
             type = GsDynamicType.NativeFunction;
         }
         else static assert("Unsupported type for GsDynamic: " ~ T.stringof);
+        
+        owner = null;
     }
     
     string toString()
