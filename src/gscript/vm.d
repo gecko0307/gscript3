@@ -209,7 +209,7 @@ class GsVirtualMachine: Owner, GsObject
         if (v)
             return *v;
         else
-            return GsDynamic(cast(double)0.0);
+            return GsDynamic();
     }
 
     void set(string key, GsDynamic value)
