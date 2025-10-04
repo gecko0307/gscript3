@@ -799,19 +799,58 @@ class GsVirtualMachine: Owner, GsObject
                         size_t len = cast(size_t)tr.pop().asNumber;
                         GsDynamic[] arr;
                         GsObject owner;
-                        if (region == 0)
+                        if (len > 0)
                         {
-                            arr = createArray(len);
-                            owner = mainThread;
+                            if (region == 0)
+                            {
+                                arr = createArray(len);
+                                owner = mainThread;
+                            }
+                            else
+                            {
+                                arr = tr.createArray(len);
+                                owner = tr;
+                            }
+                            for (size_t ai = 0; ai < len; ai++)
+                            {
+                                arr[$ - 1 - ai] = tr.pop();
+                            }
                         }
                         else
                         {
-                            arr = tr.createArray(len);
-                            owner = tr;
+                            if (region == 0)
+                                owner = mainThread;
+                            else
+                                owner = tr;
                         }
-                        for (size_t ai = 0; ai < len; ai++)
+                        GsDynamic result = GsDynamic(arr);
+                        result.owner = owner;
+                        tr.push(result);
+                        break;
+                    case GsInstructionType.ARRAY_DEF:
+                        uint region = cast(uint)instruction.operand.asNumber;
+                        size_t len = cast(size_t)tr.pop().asNumber;
+                        GsDynamic[] arr;
+                        GsObject owner;
+                        if (len > 0)
                         {
-                            arr[$ - 1 - ai] = tr.pop();
+                            if (region == 0)
+                            {
+                                arr = createArray(len);
+                                owner = mainThread;
+                            }
+                            else
+                            {
+                                arr = tr.createArray(len);
+                                owner = tr;
+                            }
+                        }
+                        else
+                        {
+                            if (region == 0)
+                                owner = mainThread;
+                            else
+                                owner = tr;
                         }
                         GsDynamic result = GsDynamic(arr);
                         result.owner = owner;

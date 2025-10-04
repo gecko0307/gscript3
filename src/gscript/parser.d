@@ -68,6 +68,7 @@ enum NodeType
     MemberCallExpression,
     KeyValueExpression,
     NewExpression,
+    ArrayExpression,
     ArgumentExpression,
     ArgumentsArrayExpression,
     SpawnExpression,
@@ -857,6 +858,19 @@ class GsParser
             
             ASTNode newExpr = new ASTNode(NodeType.NewExpression, "", [node]);
             return newExpr;
+        }
+        else if (currentToken.value == "array")
+        {
+            eat(GsTokenType.Keyword); // "array"
+            ASTNode arrayParams = new ASTNode(NodeType.ParametersExpression, "");
+            arrayParams.programScope = program.peekScope();
+            if (currentToken.type == GsTokenType.OpeningBracket)
+            {
+                parseList(arrayParams);
+            }
+            auto arrayExpr = new ASTNode(NodeType.ArrayExpression, "", [arrayParams]);
+            arrayExpr.programScope = program.peekScope();
+            return arrayExpr;
         }
         else if (currentToken.value == "func")
         {

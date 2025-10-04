@@ -455,6 +455,16 @@ class GsCodeGenerator
                 instructions ~= GsInstruction(GsInstructionType.REUSE, GsDynamic(cast(double)region));
                 break;
             
+            case NodeType.ArrayExpression:
+                auto params = node.children[0];
+                if (params.children.length)
+                    instructions ~= generate(params.children[0]);
+                else
+                    instructions ~= GsInstruction(GsInstructionType.PUSH, GsDynamic(0.0));
+                uint region = !node.sharedAccess;
+                instructions ~= GsInstruction(GsInstructionType.ARRAY_DEF, GsDynamic(cast(double)region));
+                break;
+            
             case NodeType.ArgumentExpression:
                 instructions ~= GsInstruction(GsInstructionType.LOAD_ARG, GsDynamic(node.value.to!double));
                 break;
