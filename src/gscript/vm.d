@@ -795,7 +795,25 @@ class GsVirtualMachine: Owner, GsObject
                                     for(size_t pi = 0; pi < tr.callFrame.parameters.length; pi++)
                                     {
                                         if (pi < numParams)
-                                            tr.callFrame.parameters[numParams - 1 - pi] = tr.pop();
+                                        {
+                                            GsDynamic value = tr.pop();
+                                            
+                                            bool allow = true;
+                                            if (value.type == GsDynamicType.Object ||
+                                                value.type == GsDynamicType.String ||
+                                                value.type == GsDynamicType.Array)
+                                            {
+                                                allow = tr is mainThread || value.owner is null || value.owner is mainThread;
+                                            }
+                                            
+                                            if (allow)
+                                                tr.callFrame.parameters[numParams - 1 - pi] = value;
+                                            else
+                                            {
+                                                fatality("Fatality: escaping thread-local reference");
+                                                return;
+                                            }
+                                        }
                                         else
                                             tr.callFrame.parameters[pi] = GsDynamic();
                                     }
@@ -826,7 +844,25 @@ class GsVirtualMachine: Owner, GsObject
                         for(size_t pi = 0; pi < tr.callFrame.parameters.length; pi++)
                         {
                             if (pi < numParams)
-                                tr.callFrame.parameters[numParams - 1 - pi] = tr.pop();
+                            {
+                                GsDynamic value = tr.pop();
+                                
+                                bool allow = true;
+                                if (value.type == GsDynamicType.Object ||
+                                    value.type == GsDynamicType.String ||
+                                    value.type == GsDynamicType.Array)
+                                {
+                                    allow = tr is mainThread || value.owner is null || value.owner is mainThread;
+                                }
+                                
+                                if (allow)
+                                    tr.callFrame.parameters[numParams - 1 - pi] = value;
+                                else
+                                {
+                                    fatality("Fatality: escaping thread-local reference");
+                                    return;
+                                }
+                            }
                             else
                                 tr.callFrame.parameters[pi] = GsDynamic();
                         }
