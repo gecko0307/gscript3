@@ -707,7 +707,28 @@ class GsVirtualMachine: Owner, GsObject
                             auto array = arrayParam.asArray;
                             auto value = tr.pop();
                             if (index >= 0 && index < array.length)
-                                array[index] = value;
+                            {
+                                if (value.type == GsDynamicType.Object ||
+                                    value.type == GsDynamicType.String ||
+                                    value.type == GsDynamicType.Array)
+                                {
+                                    if (value.owner is null || 
+                                        value.owner is mainThread ||
+                                        value.owner is arrayParam.owner)
+                                    {
+                                        array[index] = value;
+                                    }
+                                    else
+                                    {
+                                        fatality("Fatality: escaping thread-local reference (use \"escape\" if intended)");
+                                        return;
+                                    }
+                                }
+                                else
+                                {
+                                    array[index] = value;
+                                }
+                            }
                             else
                             {
                                 fatality("Fatality: index is outside array capability");
@@ -951,8 +972,27 @@ class GsVirtualMachine: Owner, GsObject
                         break;
                     case GsInstructionType.GLOBAL_STORE_VAR:
                         size_t vIndex = cast(size_t)instruction.operand.asNumber;
-                        mainThread.callFrames[0].localVariables[vIndex] = tr.peek(); // Store a value into a global variable
-                        break;
+                        auto value = tr.peek();
+                        if (value.type == GsDynamicType.Object ||
+                            value.type == GsDynamicType.String ||
+                            value.type == GsDynamicType.Array)
+                        {
+                            if (value.owner is null || value.owner is mainThread)
+                            {
+                                mainThread.callFrames[0].localVariables[vIndex] = value;
+                                break;
+                            }
+                            else
+                            {
+                                fatality("Fatality: escaping thread-local reference (use \"escape\" if intended)");
+                                return;
+                            }
+                        }
+                        else
+                        {
+                            mainThread.callFrames[0].localVariables[vIndex] = value; // Store a value into a global variable
+                            break;
+                        }
                     case GsInstructionType.GLOBAL_LOAD_VAR:
                         size_t vIndex = cast(size_t)instruction.operand.asNumber;
                         tr.push(mainThread.callFrames[0].localVariables[vIndex]); // Load a global variable onto the stack

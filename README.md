@@ -430,7 +430,7 @@ const thread = spawn func
 `shared` applies to the construction operation (an operation that allocates memory). So, for example, string concatenation should be marked as `shared` to allocate the result in the global heap:
 
 ```
-const str = shared("hello, " ~ "world!");
+const s = shared("a" ~ "b");
 ```
 
 Compound assignment operations that allocate memory should also be marked as `shared` for global access:
