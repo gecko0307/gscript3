@@ -313,6 +313,29 @@ class GsVirtualMachine: Owner, GsObject
         }
     }
     
+    void callInThread(GsThread tr, string jumpLabel, size_t numParams)
+    {
+        if (jumpLabel in jumpTable)
+        {
+            tr.callStack[tr.cp] = tr.ip; // Push the current instruction pointer onto the call stack
+            // Push a new call frame
+            tr.cp++;
+            tr.callFrame = &tr.callFrames[tr.cp];
+            for(size_t i = 0; i < numParams; i++)
+            {
+                tr.callFrame.parameters[numParams - 1 - i] = tr.pop();
+            }
+            
+            tr.callFrame.numParameters = numParams;
+            tr.ip = jumpTable[jumpLabel];
+            tr.callDepth++;
+        }
+        else
+        {
+            writeln("Error: unknown jump label \"", jumpLabel, "\"");
+        }
+    }
+    
     void finalize()
     {
         for (size_t i = 0; i < threads.length; i++)
