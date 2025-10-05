@@ -245,7 +245,11 @@ class GsCodeGenerator
                     {
                         // TODO: support function macros
                         auto specializedMacro = specializeMacro(macroExpr, node.children);
-                        instructions ~= generate(specializedMacro);
+                        GsDynamic eval = evaluate(specializedMacro);
+                        if (eval.type != GsDynamicType.Null)
+                            instructions ~= GsInstruction(GsInstructionType.PUSH, eval);
+                        else
+                            instructions ~= generate(specializedMacro);
                     }
                 }
                 else

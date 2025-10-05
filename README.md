@@ -657,19 +657,17 @@ There is limited support for macro specialization parametrs, which makes them id
 macro sum(a, b) = a + b;
 ```
 
-The above macro can specialize into a constant:
+The above macro can specialize into a literal:
 
 ```
-macro x = sum{3, 4}; // x = 7
-print x;
+print sum{3, 4}; // print 7
 ```
 
 ...or into an expression:
 
 ```
 const x = 10;
-macro y = sum{x, 4}; // x + 4
-print y;
+print sum{x, 4}; // print x + 4
 ```
 
 Function macros don't support specialization parameters.
