@@ -1040,7 +1040,7 @@ class GsVirtualMachine: Owner, GsObject
                         break;
                     case GsInstructionType.STORE_VAR:
                         size_t vIndex = cast(size_t)instruction.operand.asNumber;
-                        tr.callFrames[tr.cp].localVariables[vIndex] = tr.peek(); // Store a value into a local variable
+                        tr.callFrames[tr.cp].localVariables[vIndex] = tr.peek(); // Store a stack value into a local variable
                         break;
                     case GsInstructionType.LOAD_VAR:
                         size_t vIndex = cast(size_t)instruction.operand.asNumber;

@@ -1198,7 +1198,9 @@ class GsParser
             NodeType nodeType = NodeType.LetStatement;
             if (isConst)
                 nodeType = NodeType.ConstStatement;
-            ASTNode stat = new ASTNode(nodeType, varName, [expr]);
+            ASTNode letStat = new ASTNode(nodeType, varName, [expr]);
+            letStat.programScope = program.peekScope();
+            auto stat = new ASTNode(NodeType.ExpressionStatement, "", [letStat]);
             stat.programScope = program.peekScope();
             return stat;
         }
