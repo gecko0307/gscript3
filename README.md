@@ -528,3 +528,34 @@ const thread2 = spawn func
     print ch.receive();
 };
 ```
+
+## Macro Substitution
+
+Macro is an expression alias:
+
+```
+macro test = (x < 10);
+
+let x = 0;
+while (test)
+{
+    print x;
+    x += 1;
+}
+```
+
+It is convenient to define shorthands for long reference chains:
+
+```
+const obj = {
+    foo: {
+        bar: 10
+    }
+};
+
+macro bar = obj.foo.bar;
+print bar;
+
+macro format = global.string.format;
+print format("Value: %0", 100);
+```
