@@ -645,7 +645,7 @@ class GsCodeGenerator
                     if (eval.type == GsDynamicType.Number)
                         macros[node.value] = new ASTNode(NodeType.NumberLiteral, eval.asNumber.to!string);
                     else if (eval.type == GsDynamicType.String)
-                        macros[node.value] = new ASTNode(NodeType.StringLiteral, eval.asString);
+                        macros[node.value] = new ASTNode(NodeType.StringLiteral, "\"" ~ eval.asString ~ "\"");
                     else
                         macros[node.value] = node.children[0];
                 }
@@ -745,7 +745,7 @@ class GsCodeGenerator
                 else if (v1.type == GsDynamicType.String && v2.type == GsDynamicType.String)
                 {
                     if (op == "~")
-                        return GsDynamic("\"" ~ v1.asString ~ v2.asString ~ "\"");
+                        return GsDynamic(v1.asString ~ v2.asString);
                     else
                         return GsDynamic();
                 }
