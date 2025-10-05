@@ -81,7 +81,12 @@ class GsCodeGenerator
         "remove", "removeFront", "removeBack", "insert", "slice"
     ];
     
-    ASTNode[string] macros;
+    GsModule currentModule;
+    
+    auto ref macros()
+    {
+        return currentModule.macros;
+    }
     
     Scope globalScope;
     
@@ -811,6 +816,7 @@ class GsCodeGenerator
         // Store all functions in global variables
         foreach(modul; program.modulesInImportOrder)
         {
+            currentModule = modul;
             ASTNode[] ast = modul.ast;
             
             foreach(ASTNode node; ast)
@@ -845,6 +851,7 @@ class GsCodeGenerator
         // Generate code for the global context
         foreach(modul; program.modulesInImportOrder)
         {
+            currentModule = modul;
             ASTNode[] ast = modul.ast;
             
             foreach(ASTNode node; ast)
@@ -867,6 +874,7 @@ class GsCodeGenerator
         // Generate code for all functions
         foreach(modul; program.modulesInImportOrder)
         {
+            currentModule = modul;
             ASTNode[] ast = modul.ast;
             
             // Free functions

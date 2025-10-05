@@ -569,4 +569,17 @@ macro PI2 = PI * 2;
 print PI2;
 ```
 
-Currenty macros evaluation is only supported for numbers and strings.
+Currenty macro evaluation is only supported for numbers and strings.
+
+Function macros can be used to define compile-time aliases for anonymous functions, which is useful if you don't want to waste a global variable for a function:
+
+```
+macro fun = func(x) {
+    print x;
+};
+
+fun(100);
+fun(200);
+```
+
+Unlike global variables and functions, macros are defined in module's local context.

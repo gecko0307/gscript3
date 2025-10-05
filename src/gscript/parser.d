@@ -449,6 +449,7 @@ class GsModule
   public:
     string[] imports;
     bool ready = false;
+    ASTNode[string] macros;
     
     this(GsProgram program, string name)
     {
