@@ -21,7 +21,7 @@ print "Hello, World!";
 * [x] Basic build system
 * [x] Expose command line arguments
 * [x] Error handling
-* [x] Macros
+* [x] Macros with compile-time evaluation
 * [ ] Standard library
 
 ## Why GScript3?
