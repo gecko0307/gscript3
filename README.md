@@ -651,4 +651,27 @@ fun(100);
 fun(200);
 ```
 
+There is limited support for macro specialization parametrs, which makes them idiomatically close to templates in D. Unlike templates, macro specialization replaces named parameters with AST expressions rather than data types:
+
+```
+macro sum(a, b) = a + b;
+```
+
+The above macro can specialize into a constant:
+
+```
+macro x = sum{3, 4}; // x = 7
+print x;
+```
+
+...or into an expression:
+
+```
+const x = 10;
+macro y = sum{x, 4}; // x + 4
+print y;
+```
+
+Function macros don't support specialization parameters.
+
 Unlike global variables and functions, macros are defined in module's local context.
