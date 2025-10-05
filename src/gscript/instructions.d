@@ -93,7 +93,8 @@ enum GsInstructionType: ubyte
     TYPE_IS = 56,
     JMPPOP_IF = 57,     // pop and conditional jump if true
     JMPPOP_IF_NOT = 58, // pop and conditional jump if false
-    TYPE = 59           // pop a value and push its type
+    TYPE = 59,          // pop a value and push its type
+    RAISE = 60          
 }
 
 enum GsOperandType: ubyte

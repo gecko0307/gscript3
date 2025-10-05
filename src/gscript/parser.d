@@ -54,6 +54,7 @@ enum NodeType
     ExpressionStatement,
     ReturnStatement,
     YieldStatement,
+    RaiseStatement,
     PrintStatement,
     IfStatement,
     WhileStatement,
@@ -1293,6 +1294,20 @@ class GsParser
                 returnExpr = new ASTNode(NodeType.NullLiteral, "");
             eat(GsTokenType.Semicolon); // ";"
             auto stat = new ASTNode(NodeType.YieldStatement, "", [returnExpr]);
+            stat.programScope = program.peekScope();
+            return stat;
+        }
+        else if (currentToken.value == "raise")
+        {
+            eat(GsTokenType.Keyword); // "raise"
+            ASTNode errorExpr;
+            if (currentToken.type != GsTokenType.Semicolon)
+                errorExpr = parseExpression();
+            else
+                // raise empty error by default
+                errorExpr = new ASTNode(NodeType.ErrorLiteral, "");
+            eat(GsTokenType.Semicolon); // ";"
+            auto stat = new ASTNode(NodeType.RaiseStatement, "", [errorExpr]);
             stat.programScope = program.peekScope();
             return stat;
         }

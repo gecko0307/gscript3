@@ -1432,6 +1432,11 @@ class GsVirtualMachine: Owner, GsObject
                             fatality("Error value cannot be constructed from %s", param.type);
                         }
                         break;
+                    case GsInstructionType.RAISE:
+                        auto param = tr.pop();
+                        tr.yieldValue = param;
+                        tr.finalize();
+                        break;
                     case GsInstructionType.HALT:
                         tr.finalize();
                         break;

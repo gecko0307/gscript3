@@ -549,6 +549,36 @@ while(running)
 }
 ```
 
+To terminate a thread instantly, `raise` is used. This mechanism is akin to exceptions:
+
+```
+func test()
+{
+    raise error("Something");
+}
+
+func threadFunc()
+{
+    test();
+}
+
+const thread = spawn threadFunc;
+
+let running = true;
+while(running)
+{
+    const result = await thread;
+    if (result: Error)
+    {
+        print result;
+    }
+    
+    running = thread.running;
+}
+```
+
+`raise` yields an arbitrary value, which is usually an error value, but can be anything. The semantics of raising is not necessarily an error, it is application-specific.
+
 ## Channels
 
 Channel is a bidirectional inter-thread communication and synchronization primitive. When `send` is called, producer thread is blocked until the message is received by another thread. When `receive` is called, concumer thread is blocked until there is a message available.
