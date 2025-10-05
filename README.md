@@ -559,3 +559,14 @@ print bar;
 macro format = global.string.format;
 print format("Value: %0", 100);
 ```
+
+If possible, macro is evaluated at compile-time taking other macros into account, so it is possible to do simple constant expressions:
+
+```
+macro PI = 3.14159;
+macro PI2 = PI * 2;
+
+print PI2;
+```
+
+Currenty macros evaluation is only supported for numbers and strings.

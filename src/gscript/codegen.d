@@ -641,7 +641,13 @@ class GsCodeGenerator
                 }
                 else
                 {
-                    macros[node.value] = node.children[0];
+                    GsDynamic eval = evaluate(node.children[0]);
+                    if (eval.type == GsDynamicType.Number)
+                        macros[node.value] = new ASTNode(NodeType.NumberLiteral, eval.asNumber.to!string);
+                    else if (eval.type == GsDynamicType.String)
+                        macros[node.value] = new ASTNode(NodeType.StringLiteral, eval.asString);
+                    else
+                        macros[node.value] = node.children[0];
                 }
                 break;
             
@@ -659,6 +665,96 @@ class GsCodeGenerator
         }
         
         return instructions;
+    }
+    
+    GsDynamic evaluate(ASTNode node)
+    {
+        switch(node.type)
+        {
+            case NodeType.Identifier:
+                if (node.value in macros)
+                    return evaluate(macros[node.value]);
+                else
+                    return GsDynamic();
+            
+            case NodeType.NumberLiteral:
+                return GsDynamic(node.value.to!double);
+            
+            case NodeType.StringLiteral:
+                return GsDynamic(node.value[1 .. $-1]);
+                break;
+            
+            case NodeType.BooleanLiteral:
+                return GsDynamic(cast(double)node.value.to!bool);
+            
+            case NodeType.BinaryExpression:
+                string op = node.value;
+                GsDynamic v1 = evaluate(node.children[0]);
+                GsDynamic v2 = evaluate(node.children[1]);
+                if (op == ":")
+                {
+                    if (v2.type == GsDynamicType.Number)
+                        return GsDynamic(cast(double)(v1.type == cast(uint)v2.asNumber));
+                    else
+                        return GsDynamic();
+                }
+                
+                if (v1.type == GsDynamicType.Number && v2.type == GsDynamicType.Number)
+                {
+                    if (op == "+")
+                        return GsDynamic(v1.asNumber + v2.asNumber);
+                    else if (op == "-")
+                        return GsDynamic(v1.asNumber - v2.asNumber);
+                    else if (op == "*")
+                        return GsDynamic(v1.asNumber * v2.asNumber);
+                    else if (op == "/")
+                        return GsDynamic(v1.asNumber / v2.asNumber);
+                    else if (op == "*")
+                        return GsDynamic(v1.asNumber * v2.asNumber);
+                    else if (op == "%")
+                        return GsDynamic(v1.asNumber % v2.asNumber);
+                    else if (op == "^^")
+                        return GsDynamic(v1.asNumber ^^ v2.asNumber);
+                    else if (op == "&&")
+                        return GsDynamic(cast(double)(cast(bool)v1.asNumber && cast(bool)v2.asNumber));
+                    else if (op == "||")
+                        return GsDynamic(cast(double)(cast(bool)v1.asNumber || cast(bool)v2.asNumber));
+                    else if (op == "&")
+                        return GsDynamic(cast(double)(cast(long)v1.asNumber & cast(long)v2.asNumber));
+                    else if (op == "|")
+                        return GsDynamic(cast(double)(cast(long)v1.asNumber | cast(long)v2.asNumber));
+                    else if (op == "^")
+                        return GsDynamic(cast(double)(cast(long)v1.asNumber ^ cast(long)v2.asNumber));
+                    else if (op == "==")
+                        return GsDynamic(cast(double)(v1.asNumber == v2.asNumber));
+                    else if (op == "!=")
+                        return GsDynamic(cast(double)(v1.asNumber != v2.asNumber));
+                    else if (op == "<")
+                        return GsDynamic(cast(double)(v1.asNumber < v2.asNumber));
+                    else if (op == ">")
+                        return GsDynamic(cast(double)(v1.asNumber > v2.asNumber));
+                    else if (op == "<=")
+                        return GsDynamic(cast(double)(v1.asNumber <= v2.asNumber));
+                    else if (op == ">=")
+                        return GsDynamic(cast(double)(v1.asNumber >= v2.asNumber));
+                    else if (op == ":")
+                        return GsDynamic(cast(double)(v1.asNumber >= v2.asNumber));
+                    else
+                        return GsDynamic();
+                }
+                else if (v1.type == GsDynamicType.String && v2.type == GsDynamicType.String)
+                {
+                    if (op == "~")
+                        return GsDynamic("\"" ~ v1.asString ~ v2.asString ~ "\"");
+                    else
+                        return GsDynamic();
+                }
+                else
+                    return GsDynamic();
+            
+            default:
+                return GsDynamic();
+        }
     }
     
     bool nameIsDefined(Scope localScope, string name)
