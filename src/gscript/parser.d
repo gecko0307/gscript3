@@ -37,6 +37,8 @@ import gscript.lexer;
 enum NodeType
 {
     NullLiteral,
+    NanLiteral,
+    InfLiteral,
     ErrorLiteral,
     NumberLiteral,
     StringLiteral,
@@ -880,16 +882,31 @@ class GsParser
             auto node = new ASTNode(NodeType.NullLiteral, "");
             return node;
         }
+        else if (currentToken.value == "nan")
+        {
+            eat(GsTokenType.Keyword); // "nan"
+            auto node = new ASTNode(NodeType.NanLiteral, "");
+            return node;
+        }
+        else if (currentToken.value == "inf")
+        {
+            eat(GsTokenType.Keyword); // "inf"
+            auto node = new ASTNode(NodeType.InfLiteral, "");
+            return node;
+        }
         else if (currentToken.value == "error")
         {
             eat(GsTokenType.Keyword); // "error"
-            ASTNode errorParams = new ASTNode(NodeType.ParametersExpression, "");
-            errorParams.programScope = program.peekScope();
-            if (currentToken.type == GsTokenType.OpeningBracket)
+            ASTNode node;
+            if (currentToken.value == ";")
             {
-                parseList(errorParams);
+                node = new ASTNode(NodeType.ErrorLiteral, "");
             }
-            auto node = new ASTNode(NodeType.ErrorLiteral, "", [errorParams]);
+            else
+            {
+                ASTNode errorParam = parseExpression();
+                node = new ASTNode(NodeType.ErrorLiteral, "", [errorParam]);
+            }
             node.programScope = program.peekScope();
             return node;
         }

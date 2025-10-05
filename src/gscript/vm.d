@@ -380,6 +380,41 @@ class GsVirtualMachine: Owner, GsObject
         schedule();
     }
     
+    bool arraysEqual(GsDynamic[] a1, GsDynamic[] a2)
+    {
+        if (a1.length != a2.length)
+            return false;
+        
+        for(size_t i = 0; i < a1.length; i++)
+        {
+            GsDynamic a = a1[i];
+            GsDynamic b = a2[i];
+            
+            bool res = false;
+            
+            if (a.type == GsDynamicType.Number && b.type == GsDynamicType.Number)
+                res = a.asNumber == b.asNumber;
+            else if ((a.type == GsDynamicType.Error || a.type == GsDynamicType.String) && 
+                     (b.type == GsDynamicType.Error || b.type == GsDynamicType.String))
+                res = a.asString == b.asString;
+            else if (a.type == GsDynamicType.Array && b.type == GsDynamicType.Array)
+                res = arraysEqual(a.asArray, b.asArray);
+            else if (a.type == GsDynamicType.Null && b.type == GsDynamicType.Null)
+                res = true;
+            else if (a.type == GsDynamicType.Object && b.type == GsDynamicType.Object)
+                res = a.asObject is b.asObject;
+            else if (a.type == GsDynamicType.NativeMethod && b.type == GsDynamicType.NativeMethod)
+                res = a.asNativeMethod is b.asNativeMethod;
+            else if (a.type == GsDynamicType.NativeFunction && b.type == GsDynamicType.NativeFunction)
+                res = a.asNativeFunction is b.asNativeFunction;
+            
+            if (!res)
+                return false;
+        }
+        
+        return true;
+    }
+    
     void schedule()
     {
         running = true;
@@ -442,7 +477,6 @@ class GsVirtualMachine: Owner, GsObject
                         else
                         {
                             fatality("Addition of %s and %s", a.type, b.type);
-                            //return;
                         }
                         break;
                     case GsInstructionType.SUB:
@@ -453,7 +487,6 @@ class GsVirtualMachine: Owner, GsObject
                         else
                         {
                             fatality("Subtraction of %s and %s", a.type, b.type);
-                            //return;
                         }
                         break;
                     case GsInstructionType.MUL:
@@ -464,7 +497,6 @@ class GsVirtualMachine: Owner, GsObject
                         else
                         {
                             fatality("Multiplication of %s and %s", a.type, b.type);
-                            //return;
                         }
                         break;
                     case GsInstructionType.DIV:
@@ -475,7 +507,6 @@ class GsVirtualMachine: Owner, GsObject
                         else
                         {
                             fatality("Division of %s and %s", a.type, b.type);
-                            //return;
                         }
                         break;
                     case GsInstructionType.NEG:
@@ -485,7 +516,6 @@ class GsVirtualMachine: Owner, GsObject
                         else
                         {
                             fatality("Negation of %s", a.type);
-                            //return;
                         }
                         break;
                     case GsInstructionType.MOD:
@@ -496,7 +526,6 @@ class GsVirtualMachine: Owner, GsObject
                         else
                         {
                             fatality("Modulo of %s and %s", a.type, b.type);
-                            //return;
                         }
                         break;
                     case GsInstructionType.POW:
@@ -507,7 +536,6 @@ class GsVirtualMachine: Owner, GsObject
                         else
                         {
                             fatality("Power of %s and %s", a.type, b.type);
-                            //return;
                         }
                         break;
                     case GsInstructionType.BITWISE_AND:
@@ -518,7 +546,6 @@ class GsVirtualMachine: Owner, GsObject
                         else
                         {
                             fatality("Bitwise AND of %s and %s", a.type, b.type);
-                            //return;
                         }
                         break;
                     case GsInstructionType.BITWISE_OR:
@@ -529,7 +556,6 @@ class GsVirtualMachine: Owner, GsObject
                         else
                         {
                             fatality("Bitwise OR of %s and %s", a.type, b.type);
-                            //return;
                         }
                         break;
                     case GsInstructionType.BITWISE_XOR:
@@ -540,7 +566,6 @@ class GsVirtualMachine: Owner, GsObject
                         else
                         {
                             fatality("Bitwise XOR of %s and %s", a.type, b.type);
-                            //return;
                         }
                         break;
                     case GsInstructionType.AND:
@@ -551,7 +576,6 @@ class GsVirtualMachine: Owner, GsObject
                         else
                         {
                             fatality("Logical AND of %s and %s", a.type, b.type);
-                            //return;
                         }
                         break;
                     case GsInstructionType.OR:
@@ -562,7 +586,6 @@ class GsVirtualMachine: Owner, GsObject
                         else
                         {
                             fatality("Logical OR of %s and %s", a.type, b.type);
-                            //return;
                         }
                         break;
                     case GsInstructionType.NOT:
@@ -572,7 +595,6 @@ class GsVirtualMachine: Owner, GsObject
                         else
                         {
                             fatality("Logical NOT of %s", a.type);
-                            //return;
                         }
                         break;
                     case GsInstructionType.CAT:
@@ -664,7 +686,23 @@ class GsVirtualMachine: Owner, GsObject
                     case GsInstructionType.EQ:
                         auto b = tr.pop();
                         auto a = tr.pop();
-                        tr.push(GsDynamic(a == b));
+                        if (a.type == GsDynamicType.Number && b.type == GsDynamicType.Number)
+                            tr.push(GsDynamic(a.asNumber == b.asNumber));
+                        else if ((a.type == GsDynamicType.Error || a.type == GsDynamicType.String) && 
+                                 (b.type == GsDynamicType.Error || b.type == GsDynamicType.String))
+                            tr.push(GsDynamic(a.asString == b.asString));
+                        else if (a.type == GsDynamicType.Array && b.type == GsDynamicType.Array)
+                            tr.push(GsDynamic(arraysEqual(a.asArray, b.asArray)));
+                        else if (a.type == GsDynamicType.Null && b.type == GsDynamicType.Null)
+                            tr.push(GsDynamic(1.0));
+                        else if (a.type == GsDynamicType.Object && b.type == GsDynamicType.Object)
+                            tr.push(GsDynamic(a.asObject is b.asObject));
+                        else if (a.type == GsDynamicType.NativeMethod && b.type == GsDynamicType.NativeMethod)
+                            tr.push(GsDynamic(a.asNativeMethod is b.asNativeMethod));
+                        else if (a.type == GsDynamicType.NativeFunction && b.type == GsDynamicType.NativeFunction)
+                            tr.push(GsDynamic(a.asNativeFunction is b.asNativeFunction));
+                        else
+                            tr.push(GsDynamic(0.0));
                         break;
                     case GsInstructionType.LESS:
                         auto b = tr.pop().asNumber;
@@ -765,7 +803,6 @@ class GsVirtualMachine: Owner, GsObject
                             else
                             {
                                 fatality("Index is outside array capability");
-                                //return;
                                 break;
                             }
                         }
@@ -780,14 +817,12 @@ class GsVirtualMachine: Owner, GsObject
                             else
                             {
                                 fatality("Index is outside string length");
-                                //return;
                                 break;
                             }
                         }
                         else
                         {
                             fatality("Attempting to index %s which is not an array", arrayParam.type);
-                            //return;
                             break;
                         }
                     case GsInstructionType.INDEX_SET:
@@ -812,7 +847,6 @@ class GsVirtualMachine: Owner, GsObject
                                     else
                                     {
                                         fatality("Escaping thread-local reference (use \"escape\" if intended)");
-                                        //return;
                                         break;
                                     }
                                 }
@@ -824,7 +858,6 @@ class GsVirtualMachine: Owner, GsObject
                             else
                             {
                                 fatality("Index is outside array capability");
-                                //return;
                                 break;
                             }
                             tr.push(value);
@@ -833,7 +866,6 @@ class GsVirtualMachine: Owner, GsObject
                         else
                         {
                             fatality("Attempting to index %s which is not an array", arrayParam.type);
-                            //return;
                             break;
                         }
                     case GsInstructionType.LENGTH:
@@ -1005,14 +1037,12 @@ class GsVirtualMachine: Owner, GsObject
                                 else
                                 {
                                     fatality("Undefined jump label \"%s\"", funcName);
-                                    //return;
                                     break;
                                 }
                             }
                             else
                             {
                                 fatality("Attempting to call %s, which is not a function", func.type);
-                                //return;
                                 break;
                             }
                         }
@@ -1043,7 +1073,6 @@ class GsVirtualMachine: Owner, GsObject
                                 else
                                 {
                                     fatality("Escaping thread-local reference (use \"escape\" if intended)");
-                                    //return;
                                     break;
                                 }
                             }
@@ -1129,7 +1158,6 @@ class GsVirtualMachine: Owner, GsObject
                             else
                             {
                                 fatality("Escaping thread-local reference (use \"escape\" if intended)");
-                                //return;
                                 break;
                             }
                         }
@@ -1185,7 +1213,6 @@ class GsVirtualMachine: Owner, GsObject
                         else
                         {
                             fatality("Attempting to reuse ", param.type);
-                            //return;
                         }
                         break;
                     case GsInstructionType.GET:
@@ -1200,7 +1227,6 @@ class GsVirtualMachine: Owner, GsObject
                         else
                         {
                             fatality("Attempting to read member \"%s\" of %s", key, storageObj.type);
-                            //return;
                         }
                         break;
                     case GsInstructionType.SET:
@@ -1225,7 +1251,6 @@ class GsVirtualMachine: Owner, GsObject
                                 else
                                 {
                                     fatality("Escaping thread-local reference (use \"escape\" if intended)");
-                                    //return;
                                     break;
                                 }
                             }
@@ -1239,7 +1264,6 @@ class GsVirtualMachine: Owner, GsObject
                         else
                         {
                             fatality("Attempting to write member \"%s\" of %s", key, storageObj.type);
-                            //return;
                         }
                         break;
                     case GsInstructionType.INIT_SET:
@@ -1263,7 +1287,6 @@ class GsVirtualMachine: Owner, GsObject
                                 else
                                 {
                                     fatality("Escaping thread-local reference (use \"escape\" if intended)");
-                                    //return;
                                     break;
                                 }
                             }
@@ -1276,7 +1299,6 @@ class GsVirtualMachine: Owner, GsObject
                         else
                         {
                             fatality("Attempting to write member \"%s\" of %s", key, storageObj.type);
-                            //return;
                         }
                         break;
                     case GsInstructionType.CONTAINS:
@@ -1289,7 +1311,6 @@ class GsVirtualMachine: Owner, GsObject
                         else
                         {
                             fatality("Attempting to read member \"%s\" of %s", key, storageObj.type);
-                            //return;
                         }
                         break;
                     case GsInstructionType.SPAWN:
@@ -1309,7 +1330,6 @@ class GsVirtualMachine: Owner, GsObject
                                 else if (payloadParam.type != GsDynamicType.Null)
                                 {
                                     fatality("Attempting to payload a thread with %s, which is not an object", payloadParam.type);
-                                    //return;
                                     break;
                                 }
                                 
@@ -1367,13 +1387,11 @@ class GsVirtualMachine: Owner, GsObject
                             else
                             {
                                 fatality("Unknown jump label %s", jumpLabel);
-                                //return;
                             }
                         }
                         else
                         {
                             fatality("Attempting to spawn %s, which is not a function", func.type);
-                            //return;
                         }
                         break;
                     case GsInstructionType.AWAIT:
@@ -1401,13 +1419,11 @@ class GsVirtualMachine: Owner, GsObject
                             else
                             {
                                 fatality("Attempting to await non-thread object", param.type);
-                                //return;
                             }
                         }
                         else
                         {
                             fatality("Attempting to await %s, which is not a thread", param.type);
-                            //return;
                         }
                         break;
                     case GsInstructionType.SYNC:
@@ -1432,13 +1448,11 @@ class GsVirtualMachine: Owner, GsObject
                             else
                             {
                                 fatality("Attempting to sync non-thread object", param.type);
-                                //return;
                             }
                         }
                         else
                         {
                             fatality("Attempting to sync %s, which is not a thread", param.type);
-                            //return;
                         }
                         break;
                     case GsInstructionType.ERROR:
@@ -1455,16 +1469,27 @@ class GsVirtualMachine: Owner, GsObject
                         }
                         break;
                     case GsInstructionType.RAISE:
-                        auto param = tr.pop();
-                        tr.yieldValue = param;
-                        tr.finalize();
+                        if (tr is mainThread)
+                        {
+                            auto param = tr.pop();
+                            tr.yieldValue = param;
+                            string msg = param.toString;
+                            if (msg.length == 0)
+                                msg = "Error raised in main thread";
+                            fatality(msg);
+                        }
+                        else
+                        {
+                            auto param = tr.pop();
+                            tr.yieldValue = param;
+                            tr.finalize();
+                        }
                         break;
                     case GsInstructionType.HALT:
                         tr.finalize();
                         break;
                     default:
                         fatality("Unsupported instruction: %s", instruction.type);
-                        //return;
                         break;
                 }
                 
