@@ -397,8 +397,6 @@ class GsVirtualMachine: Owner, GsObject
             else if ((a.type == GsDynamicType.Error || a.type == GsDynamicType.String) && 
                      (b.type == GsDynamicType.Error || b.type == GsDynamicType.String))
                 res = a.asString == b.asString;
-            else if (a.type == GsDynamicType.Array && b.type == GsDynamicType.Array)
-                res = arraysEqual(a.asArray, b.asArray);
             else if (a.type == GsDynamicType.Null && b.type == GsDynamicType.Null)
                 res = true;
             else if (a.type == GsDynamicType.Object && b.type == GsDynamicType.Object)

@@ -118,7 +118,7 @@ struct GsDynamic
             case GsDynamicType.String:
                 return asString;
             case GsDynamicType.Array:
-                return asArray.to!string;
+                return printArray(asArray, asArray);
             case GsDynamicType.Object:
                 return asObject.to!string;
             case GsDynamicType.NativeMethod:
@@ -133,4 +133,33 @@ struct GsDynamic
                 return "null";
         }
     }
+}
+
+string printArray(GsDynamic[] rootArray, GsDynamic[] array)
+{
+    string output = "[";
+    foreach(i, e; array)
+    {
+        if (e.type == GsDynamicType.Array)
+        {
+            if (e.asArray.ptr is rootArray.ptr && e.asArray.length == rootArray.length)
+            {
+                output ~= "[recursion]";
+            }
+            else
+            {
+                output ~= printArray(rootArray, e.asArray);
+            }
+        }
+        else
+        {
+            output ~= e.toString();
+        }
+        
+        if (i < array.length - 1)
+            output ~= ", ";
+    }
+    output ~= "]";
+    
+    return output;
 }
