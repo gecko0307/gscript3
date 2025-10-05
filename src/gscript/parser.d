@@ -1057,7 +1057,7 @@ class GsParser
         }
         else if (currentToken.value == ".")
         {
-            eat(GsTokenType.Separator); // "."
+            eat("."); // "."
             string name = currentToken.value;
             eat(GsTokenType.Identifier);
             ASTNode node;
@@ -1400,7 +1400,7 @@ class GsParser
             if (currentToken.type == GsTokenType.ClosingBracket)
                 break;
             else
-                eat(GsTokenType.Separator);
+                eat(",");
         }
         while(running && reading);
         
@@ -1469,7 +1469,7 @@ class GsParser
             auto parameterExpr = parseExpression();
             parentNode.children ~= parameterExpr;
             if (currentToken.value == ",")
-                eat(GsTokenType.Separator);
+                eat(",");
         }
         eat(GsTokenType.ClosingBracket); // )
     }
@@ -1484,7 +1484,7 @@ class GsParser
             auto parameterExpr = parseExpression();
             parentNode.children ~= parameterExpr;
             if (currentToken.value == ",")
-                eat(GsTokenType.Separator);
+                eat(",");
         }
         eat(GsTokenType.ClosingSquareBracket); // ]
     }
@@ -1499,7 +1499,7 @@ class GsParser
             auto keyValueExpr = parseKeyValueExpression();
             parentNode.children ~= keyValueExpr;
             if (currentToken.value == ",")
-                eat(GsTokenType.Separator);
+                eat(",");
             else if (currentToken.type != GsTokenType.ClosingCurlyBracket)
             {
                 stop("Unexpected token \"" ~ currentToken.value ~ "\" in object literal");
@@ -1517,7 +1517,7 @@ class GsParser
             eat(GsTokenType.Identifier);
             ASTNode node = new ASTNode(NodeType.KeyValueExpression, name);
             if (currentToken.value == ":")
-                eat(GsTokenType.Separator); // :
+                eat(":"); // :
             else
             {
                 stop("Unexpected token \"" ~ currentToken.value ~ "\" in key-value expression");

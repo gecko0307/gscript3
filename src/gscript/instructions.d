@@ -91,8 +91,8 @@ enum GsInstructionType: ubyte
     ARRAY_DEF = 54,
     ERROR = 55,
     TYPE_IS = 56,
-    POP_JMP_IF = 24,       // pop and conditional jump if true
-    POP_JMP_IF_NOT = 25,   // pop and conditional jump if false
+    JMPPOP_IF = 57,       // pop and conditional jump if true
+    JMPPOP_IF_NOT = 58,   // pop and conditional jump if false
 }
 
 enum GsOperandType: ubyte

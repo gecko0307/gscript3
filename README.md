@@ -20,7 +20,8 @@ print "Hello, World!";
 * [x] Channels
 * [x] Basic build system
 * [x] Expose command line arguments
-* [ ] Error handling
+* [x] Error handling
+* [x] Macros
 * [ ] Standard library
 
 ## Why GScript3?

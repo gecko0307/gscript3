@@ -61,7 +61,7 @@ enum GsTokenType
     ClosingBracket,
     ClosingSquareBracket,
     ClosingCurlyBracket,
-    Separator,
+    //Separator,
     Semicolon,
     Keyword,
     EOF
@@ -83,7 +83,7 @@ string tokenTypeToString(GsTokenType t)
         case GsTokenType.ClosingBracket: return "closing bracket";
         case GsTokenType.ClosingSquareBracket: return "closing square bracket";
         case GsTokenType.ClosingCurlyBracket: return "closing curly bracket";
-        case GsTokenType.Separator: return "separator";
+        //case GsTokenType.Separator: return "separator";
         case GsTokenType.Semicolon: return "semicolon";
         case GsTokenType.Keyword: return "keyword";
         case GsTokenType.EOF: return "end of file";
@@ -152,9 +152,11 @@ class GsLexer
     
     string quotes = "\"\'`";
     
+    /*
     string[] separators = [
-        ".", ","
+        ".", ",", ":"
     ];
+    */
     
     this(string text)
     {
@@ -213,10 +215,12 @@ class GsLexer
         {
             return GsToken(GsTokenType.ClosingCurlyBracket, lexeme);
         }
+        /*
         else if (separators.canFind(lexeme))
         {
             return GsToken(GsTokenType.Separator, lexeme);
         }
+        */
         else if (lexeme == "true" || lexeme == "false")
         {
             return GsToken(GsTokenType.Boolean, lexeme);

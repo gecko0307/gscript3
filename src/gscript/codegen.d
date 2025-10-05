@@ -550,7 +550,7 @@ class GsCodeGenerator
             case NodeType.IfStatement:
                 string labelEndIf = getLabel();
                 instructions ~= generate(node.children[0]); // condition
-                instructions ~= GsInstruction(GsInstructionType.JMP_IF_NOT, GsDynamic(labelEndIf));
+                instructions ~= GsInstruction(GsInstructionType.JMPPOP_IF_NOT, GsDynamic(labelEndIf));
                 instructions ~= GsInstruction(GsInstructionType.POP);
                 instructions ~= generate(node.children[1]); // if-block
                 if (node.children.length > 2)
@@ -558,14 +558,12 @@ class GsCodeGenerator
                     string labelEndElse = getLabel();
                     instructions ~= GsInstruction(GsInstructionType.JMP, GsDynamic(labelEndElse));
                     instructions ~= GsInstruction(GsInstructionType.LABEL, GsDynamic(labelEndIf));
-                    instructions ~= GsInstruction(GsInstructionType.POP);
                     instructions ~= generate(node.children[2]); // else-block
                     instructions ~= GsInstruction(GsInstructionType.LABEL, GsDynamic(labelEndElse));
                 }
                 else
                 {
                     instructions ~= GsInstruction(GsInstructionType.LABEL, GsDynamic(labelEndIf));
-                    instructions ~= GsInstruction(GsInstructionType.POP);
                 }
                 break;
             
@@ -578,12 +576,11 @@ class GsCodeGenerator
                 loopBlock.programScope.continueLabel = labelStartWhile;
                 instructions ~= GsInstruction(GsInstructionType.LABEL, GsDynamic(labelStartWhile));
                 instructions ~= generate(condition);
-                instructions ~= GsInstruction(GsInstructionType.JMP_IF_NOT, GsDynamic(labelEndWhile));
+                instructions ~= GsInstruction(GsInstructionType.JMPPOP_IF_NOT, GsDynamic(labelEndWhile));
                 instructions ~= GsInstruction(GsInstructionType.POP);
                 instructions ~= generate(loopBlock);
                 instructions ~= GsInstruction(GsInstructionType.JMP, GsDynamic(labelStartWhile));
                 instructions ~= GsInstruction(GsInstructionType.LABEL, GsDynamic(labelEndWhile));
-                instructions ~= GsInstruction(GsInstructionType.POP);
                 break;
             
             case NodeType.DoWhileStatement:
@@ -594,10 +591,9 @@ class GsCodeGenerator
                 loopBlock.programScope.breakLabel = labelEndWhile;
                 loopBlock.programScope.continueLabel = labelStartWhile;
                 instructions ~= GsInstruction(GsInstructionType.LABEL, GsDynamic(labelStartWhile));
-                instructions ~= GsInstruction(GsInstructionType.POP);
                 instructions ~= generate(loopBlock); // loop
                 instructions ~= generate(condition); // condition
-                instructions ~= GsInstruction(GsInstructionType.JMP_IF, GsDynamic(labelStartWhile));
+                instructions ~= GsInstruction(GsInstructionType.JMPPOP_IF, GsDynamic(labelStartWhile));
                 instructions ~= GsInstruction(GsInstructionType.POP);
                 instructions ~= GsInstruction(GsInstructionType.LABEL, GsDynamic(labelEndWhile));
                 break;
@@ -614,13 +610,12 @@ class GsCodeGenerator
                 instructions ~= generate(initialization); // initialization
                 instructions ~= GsInstruction(GsInstructionType.LABEL, GsDynamic(labelStartFor));
                 instructions ~= generate(condition); // condition
-                instructions ~= GsInstruction(GsInstructionType.JMP_IF_NOT, GsDynamic(labelEndFor));
+                instructions ~= GsInstruction(GsInstructionType.JMPPOP_IF_NOT, GsDynamic(labelEndFor));
                 instructions ~= GsInstruction(GsInstructionType.POP);
                 instructions ~= generate(loopBlock); // loop
                 instructions ~= generate(advancement); // advancement
                 instructions ~= GsInstruction(GsInstructionType.JMP, GsDynamic(labelStartFor));
                 instructions ~= GsInstruction(GsInstructionType.LABEL, GsDynamic(labelEndFor));
-                instructions ~= GsInstruction(GsInstructionType.POP);
                 break;
             
             case NodeType.BreakStatement:

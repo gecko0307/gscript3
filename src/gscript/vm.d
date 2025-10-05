@@ -711,6 +711,20 @@ class GsVirtualMachine: Owner, GsObject
                             tr.ip = jumpTable[instruction.operand.asString];
                         }
                         break;
+                    case GsInstructionType.JMPPOP_IF:
+                        if (cast(bool)tr.peek().asNumber)
+                        {
+                            tr.pop();
+                            tr.ip = jumpTable[instruction.operand.asString];
+                        }
+                        break;
+                    case GsInstructionType.JMPPOP_IF_NOT:
+                        if (!cast(bool)tr.peek().asNumber)
+                        {
+                            tr.pop();
+                            tr.ip = jumpTable[instruction.operand.asString];
+                        }
+                        break;
                     case GsInstructionType.INDEX_GET:
                         size_t index = cast(size_t)tr.pop().asNumber;
                         auto arrayParam = tr.pop();

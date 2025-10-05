@@ -1,5 +1,5 @@
-const io = global.io;
-const time = global.time;
+macro io = global.io;
+macro time = global.time;
 
 const filename = "dub.json";
 if io.fileExists(filename)
