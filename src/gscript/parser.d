@@ -78,7 +78,8 @@ enum NodeType
     SyncExpression,
     ParametersExpression,
     SharedExpression,
-    EscapeExpression
+    EscapeExpression,
+    TypeExpression
 }
 
 immutable string[] assignOperators = [
@@ -950,6 +951,14 @@ class GsParser
             func.isVariadic = isVariadic;
             func.programScope = program.peekScope();
             return func;
+        }
+        else if (currentToken.value == "type")
+        {
+            eat(GsTokenType.Keyword); // "type"
+            ASTNode valueExpr = parseExpression();
+            auto typeExpr = new ASTNode(NodeType.TypeExpression, "", [valueExpr]);
+            typeExpr.programScope = program.peekScope();
+            return typeExpr;
         }
         else if (currentToken.value == "spawn")
         {

@@ -132,7 +132,7 @@ class GsLexer
         "spawn", "await", "sync", "yield", "shared", "escape",
         "import", "from",
         "print",
-        "macro"
+        "type", "macro"
     ];
     
     string[] operators = [
@@ -151,12 +151,6 @@ class GsLexer
     ];
     
     string quotes = "\"\'`";
-    
-    /*
-    string[] separators = [
-        ".", ",", ":"
-    ];
-    */
     
     this(string text)
     {

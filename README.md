@@ -258,6 +258,45 @@ Foo.test();
 
 Currently there is no module-local scope! All root-level definitions are placed in one global scope, so it is not recommended to define global variables and free functions in modules to avoid name conflicts.
 
+## Type Checking
+
+The type of a dynamic value can be compared against a type-constant using the `:` operator:
+
+```
+const x = 10;
+if (x: Number)
+{
+    // ...
+}
+```
+
+Alternatively, the type can be yielded as a value using `type` keyword and compared using ordinary comparison operators. This is useful for type logics:
+
+```
+if (type(x) != Null)
+{
+    // ...
+}
+
+if (type(x) == type(y))
+{
+    // ...
+}
+```
+
+Type-constants are the following:
+
+```
+Null = 0
+Number = 1
+String = 2
+Array = 3
+Object = 4
+NativeMethod = 5
+NativeFunction = 6
+Error = 7
+```
+
 ## Variadic Arguments
 In GScript3, all functions can accept any number of arguments. Named arguments list is optional. Anonymous arguments are accessed with `$` operator:
 

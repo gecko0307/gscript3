@@ -691,6 +691,10 @@ class GsVirtualMachine: Owner, GsObject
                         auto a = tr.pop().asNumber;
                         tr.push(GsDynamic(a >= b));
                         break;
+                    case GsInstructionType.TYPE:
+                        auto val = tr.pop();
+                        tr.push(GsDynamic(cast(double)(val.type)));
+                        break;
                     case GsInstructionType.TYPE_IS:
                         auto b = tr.pop().asNumber;
                         auto a = tr.pop();

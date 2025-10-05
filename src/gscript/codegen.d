@@ -563,6 +563,11 @@ class GsCodeGenerator
                 instructions ~= GsInstruction(GsInstructionType.ARRAY_DEF, GsDynamic(cast(double)region));
                 break;
             
+            case NodeType.TypeExpression:
+                instructions ~= generate(node.children[0]);
+                instructions ~= GsInstruction(GsInstructionType.TYPE);
+                break;
+            
             case NodeType.ArgumentExpression:
                 instructions ~= GsInstruction(GsInstructionType.LOAD_ARG, GsDynamic(node.value.to!double));
                 break;
