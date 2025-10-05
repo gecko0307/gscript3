@@ -295,6 +295,7 @@ Object = 4
 NativeMethod = 5
 NativeFunction = 6
 Error = 7
+Function = 8
 ```
 
 ## Variadic Arguments
@@ -366,8 +367,8 @@ const thread = spawn func
 let running = true;
 while(running)
 {
-    print await thread; // prints yield values
     running = thread.running;
+    print await thread; // prints yield values
 }
 ```
 
@@ -391,10 +392,10 @@ const thread = spawn(null, 5) func(self, init)
 let running = true;
 while(running)
 {
+    running = thread.running;
     print sync thread;
     thread.i = 0; // modify thread's payload while synchronized
     thread.resume();
-    running = thread.running;
 }
 ```
 
@@ -422,10 +423,10 @@ const thread = spawn(obj, 5) obj.test;
 let running = true;
 while(running)
 {
+    running = thread.running;
     print sync thread;
     thread.foo = "test";
     thread.resume();
-    running = thread.running;
 }
 
 print obj.foo; // "test"
@@ -455,10 +456,10 @@ const thread = spawn(new obj, 5) obj.test;
 let running = true;
 while(running)
 {
+    running = thread.running;
     print sync thread;
     thread.foo = "test";
     thread.resume();
-    running = thread.running;
 }
 
 print thread.foo; // "test"
@@ -539,13 +540,12 @@ const thread = spawn threadFunc;
 let running = true;
 while(running)
 {
+    running = thread.running;
     const result = await thread;
     if (result: Error)
     {
         print result;
     }
-    
-    running = thread.running;
 }
 ```
 
@@ -567,13 +567,12 @@ const thread = spawn threadFunc;
 let running = true;
 while(running)
 {
+    running = thread.running;
     const result = await thread;
     if (result: Error)
     {
         print result;
     }
-    
-    running = thread.running;
 }
 ```
 

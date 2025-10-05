@@ -693,12 +693,34 @@ class GsVirtualMachine: Owner, GsObject
                         break;
                     case GsInstructionType.TYPE:
                         auto val = tr.pop();
-                        tr.push(GsDynamic(cast(double)(val.type)));
+                        if (val.type == GsDynamicType.String)
+                        {
+                            if (val.asString in jumpTable)
+                                tr.push(GsDynamic(1.0));
+                            else
+                                tr.push(GsDynamic(cast(double)(val.type)));
+                        }
+                        else
+                        {
+                            tr.push(GsDynamic(cast(double)(val.type)));
+                        }
                         break;
                     case GsInstructionType.TYPE_IS:
                         auto b = tr.pop().asNumber;
                         auto a = tr.pop();
-                        tr.push(GsDynamic(cast(double)(a.type == cast(uint)b)));
+                        if (cast(uint)b == GsDynamicType.Function)
+                        {
+                            bool result = false;
+                            if (a.type == GsDynamicType.String)
+                            {
+                                result = (a.asString in jumpTable) !is null;
+                            }
+                            tr.push(GsDynamic(cast(double)result));
+                        }
+                        else
+                        {
+                            tr.push(GsDynamic(cast(double)(a.type == cast(uint)b)));
+                        }
                         break;
                     case GsInstructionType.JMP:
                         tr.ip = jumpTable[instruction.operand.asString];
