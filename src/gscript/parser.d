@@ -82,7 +82,8 @@ enum NodeType
     ParametersExpression,
     SharedExpression,
     EscapeExpression,
-    TypeExpression
+    TypeExpression,
+    MacroSpecializationExpression
 }
 
 immutable string[] assignOperators = [
@@ -335,7 +336,8 @@ class ASTNode
     Scope programScope;
     bool isConst = false;
     bool sharedAccess = false;
-
+    string[] macroParameters;
+    
     this(NodeType type, string value, ASTNode[] children = [])
     {
         this.type = type;
@@ -442,6 +444,25 @@ class ASTFunctionLiteral: ASTNode
         }
     }
 }
+
+/*
+class ASTMacroStatement: ASTNode
+{
+    string[] parameters;
+    
+    this(string name, string[] parameters, ASTNode expression)
+    {
+        super(NodeType.MacroDefineStatement, name, [expression]);
+        this.parameters = parameters;
+    }
+    
+    override void print(string indent = "")
+    {
+        writeln(indent, type);
+        children[0].print(indent ~ "  ");
+    }
+}
+*/
 
 class GsModule
 {
@@ -1036,6 +1057,13 @@ class GsParser
                 node.programScope = program.peekScope();
                 parseList(node);
             }
+            else if (currentToken.type == GsTokenType.OpeningCurlyBracket)
+            {
+                // Macro specialization
+                node = new ASTNode(NodeType.MacroSpecializationExpression, name);
+                node.programScope = program.peekScope();
+                parseSpecializationArguments(node);
+            }
             else
             {
                 // Variable access
@@ -1407,12 +1435,18 @@ class GsParser
                 eat(GsTokenType.Keyword); // macro
                 string macroName = currentToken.value;
                 eat(GsTokenType.Identifier); // macroName
+                string[] macroParams;
+                if (currentToken.type == GsTokenType.OpeningBracket)
+                {
+                    macroParams = parseFunctionArguments();
+                }
                 eat("=");
                 ASTNode macroExpr = parseExpression();
+                macroExpr.macroParameters = macroParams;
                 eat(GsTokenType.Semicolon); // ';'
-                auto stat = new ASTNode(NodeType.MacroDefineStatement, macroName, [macroExpr]);
-                stat.programScope = program.peekScope();
-                return stat;
+                auto macroStat = new ASTNode(NodeType.MacroDefineStatement, macroName, [macroExpr]);
+                macroStat.programScope = program.peekScope();
+                return macroStat;
             }
             else
             {
@@ -1522,6 +1556,21 @@ class GsParser
                 eat(",");
         }
         eat(GsTokenType.ClosingBracket); // )
+    }
+    
+    void parseSpecializationArguments(ASTNode parentNode)
+    {
+        eat(GsTokenType.OpeningCurlyBracket); // {
+        while(running)
+        {
+            if (currentToken.type == GsTokenType.ClosingCurlyBracket)
+                break;
+            auto parameterExpr = parseExpression();
+            parentNode.children ~= parameterExpr;
+            if (currentToken.value == ",")
+                eat(",");
+        }
+        eat(GsTokenType.ClosingCurlyBracket); // }
     }
     
     void parseArray(ASTNode parentNode)
