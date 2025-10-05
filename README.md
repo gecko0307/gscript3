@@ -44,7 +44,8 @@ Most popular scripting engines are too cumbersome for embedding in languages oth
 - Implicit function referencing. Function reference is created without `ref` keyword
 - Array length is now returned by the built-in `length` property instead of a global `length` function
 - `print` instead of `writeln`
-- Spawning functions as threads/coroutines; see below.
+- Spawning functions as threads/coroutines; see below
+- Macros; see below.
 
 Architecture improvements:
 - Fast VM with a more efficient ISA
