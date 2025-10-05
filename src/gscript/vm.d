@@ -422,6 +422,8 @@ class GsVirtualMachine: Owner, GsObject
                 
                 currentThread = tr;
                 
+                //writeln(instruction);
+                
                 switch (instruction.type)
                 {
                     case GsInstructionType.LABEL:
@@ -689,16 +691,25 @@ class GsVirtualMachine: Owner, GsObject
                         auto a = tr.pop().asNumber;
                         tr.push(GsDynamic(a >= b));
                         break;
+                    case GsInstructionType.TYPE_IS:
+                        auto b = tr.pop().asNumber;
+                        auto a = tr.pop();
+                        tr.push(GsDynamic(cast(double)(a.type == cast(uint)b)));
+                        break;
                     case GsInstructionType.JMP:
                         tr.ip = jumpTable[instruction.operand.asString];
                         break;
                     case GsInstructionType.JMP_IF:
-                        if (cast(bool)tr.pop().asNumber)
+                        if (cast(bool)tr.peek().asNumber)
+                        {
                             tr.ip = jumpTable[instruction.operand.asString];
+                        }
                         break;
                     case GsInstructionType.JMP_IF_NOT:
-                        if (!cast(bool)tr.pop().asNumber)
+                        if (!cast(bool)tr.peek().asNumber)
+                        {
                             tr.ip = jumpTable[instruction.operand.asString];
+                        }
                         break;
                     case GsInstructionType.INDEX_GET:
                         size_t index = cast(size_t)tr.pop().asNumber;
@@ -1022,7 +1033,7 @@ class GsVirtualMachine: Owner, GsObject
                         }
                         else
                         {
-                            // Return from external call, halt execution
+                            // Return from thread, halt execution
                             tr.yieldValue = tr.pop();
                             tr.finalize();
                         }
@@ -1332,9 +1343,7 @@ class GsVirtualMachine: Owner, GsObject
                             GsThread paramThread = cast(GsThread)param.asObject;
                             if (paramThread)
                             {
-                                if (paramThread.status == GsThreadStatus.Paused || 
-                                    paramThread.status == GsThreadStatus.Stopped || 
-                                    paramThread.status == GsThreadStatus.Free)
+                                if (paramThread.status != GsThreadStatus.Running)
                                 {
                                     tr.status = GsThreadStatus.Running;
                                     tr.pop();
@@ -1368,9 +1377,7 @@ class GsVirtualMachine: Owner, GsObject
                             GsThread paramThread = cast(GsThread)param.asObject;
                             if (paramThread)
                             {
-                                if (paramThread.status == GsThreadStatus.Paused || 
-                                    paramThread.status == GsThreadStatus.Stopped || 
-                                    paramThread.status == GsThreadStatus.Free)
+                                if (paramThread.status != GsThreadStatus.Running)
                                 {
                                     tr.status = GsThreadStatus.Running;
                                     tr.pop();

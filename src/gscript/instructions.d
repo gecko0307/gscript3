@@ -89,7 +89,10 @@ enum GsInstructionType: ubyte
     BORROW = 52,       // BORROW             - pop a value, set its owner to the current thread, and push back
     ESCAPE = 53,       // ESCAPE             - pop a value, set its owner to the main thread, and push back
     ARRAY_DEF = 54,
-    ERROR = 55
+    ERROR = 55,
+    TYPE_IS = 56,
+    POP_JMP_IF = 24,       // pop and conditional jump if true
+    POP_JMP_IF_NOT = 25,   // pop and conditional jump if false
 }
 
 enum GsOperandType: ubyte

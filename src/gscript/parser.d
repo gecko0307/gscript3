@@ -61,6 +61,7 @@ enum NodeType
     ForStatement,
     BreakStatement,
     ContinueStatement,
+    MacroDefineStatement,
     Block,
     FunctionCallExpression,
     IndexAccessExpression,
@@ -95,6 +96,10 @@ immutable string[] bitwiseOperators = [
 
 immutable string[] compareOperators = [
     ">", "<", "==", ">=", "<=", "!="
+];
+
+immutable string[] typeCheckOperators = [
+    ":"
 ];
 
 immutable string[] mulDivModOperators = [
@@ -137,6 +142,12 @@ bool isCompare(GsToken token)
 {
     return token.type == GsTokenType.Operator && 
            compareOperators.canFind(token.value);
+}
+
+bool isTypeCheck(GsToken token)
+{
+    return token.type == GsTokenType.Operator && 
+           typeCheckOperators.canFind(token.value);
 }
 
 bool isAddSub(GsToken token)
@@ -570,6 +581,19 @@ class GsParser
             writeln(filename, "(", lexer.line.to!string, "): ", msg);
         }
     }
+    
+    void eat(string expectedTokenValue)
+    {
+        if (currentToken.value == expectedTokenValue)
+            currentToken = lexer.nextToken();
+        else
+        {
+            if (currentToken.type == GsTokenType.EOF)
+                stop("Unexpected end of file, " ~ expectedTokenValue ~ " expected");
+            else
+                stop("Unexpected token \"" ~ currentToken.value ~ "\", " ~ expectedTokenValue ~ " expected");
+        }
+    }
 
     void eat(GsTokenType expectedType)
     {
@@ -686,7 +710,7 @@ class GsParser
     */
     ASTNode parseCompareExpression()
     {
-        ASTNode left = parseAddSubExpression();
+        ASTNode left = parseTypeCheckExpression();
         
         while(isCompare(currentToken))
         {
@@ -697,6 +721,22 @@ class GsParser
             left.programScope = program.peekScope();
         }
 
+        return left;
+    }
+    
+    ASTNode parseTypeCheckExpression()
+    {
+        ASTNode left = parseAddSubExpression();
+        
+        while(isTypeCheck(currentToken))
+        {
+            string op = currentToken.value;
+            eat(GsTokenType.Operator);
+            ASTNode right = parseTypeCheckExpression();
+            left = new ASTNode(NodeType.BinaryExpression, op, [left, right]);
+            left.programScope = program.peekScope();
+        }
+        
         return left;
     }
     
@@ -1317,6 +1357,18 @@ class GsParser
                 stop("Nested free functions are not allowed");
                 return null;
             }
+        }
+        else if (currentToken.value == "macro")
+        {
+            eat(GsTokenType.Keyword); // macro
+            string macroName = currentToken.value;
+            eat(GsTokenType.Identifier); // macroName
+            eat("=");
+            ASTNode macroExpr = parseExpression();
+            eat(GsTokenType.Semicolon); // ';'
+            auto stat = new ASTNode(NodeType.MacroDefineStatement, macroName, [macroExpr]);
+            stat.programScope = program.peekScope();
+            return stat;
         }
         else
         {

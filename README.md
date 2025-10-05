@@ -297,9 +297,11 @@ const thread = spawn func
     }
 };
 
-while(thread.running)
+let running = true;
+while(running)
 {
     // busy-wait
+    running = thread.running;
 }
 ```
 
@@ -320,9 +322,11 @@ const thread = spawn func
     return i;
 };
 
-while(thread.running)
+let running = true;
+while(running)
 {
     print await thread; // prints yield values
+    running = thread.running;
 }
 ```
 
@@ -343,11 +347,13 @@ const thread = spawn(null, 5) func(self, init)
     return self.i;
 };
 
-while(thread.running)
+let running = true;
+while(running)
 {
     print sync thread;
     thread.i = 0; // modify thread's payload while synchronized
     thread.resume();
+    running = thread.running;
 }
 ```
 
@@ -372,11 +378,13 @@ const obj = {
 
 const thread = spawn(obj, 5) obj.test;
 
-while(thread.running)
+let running = true;
+while(running)
 {
     print sync thread;
     thread.foo = "test";
     thread.resume();
+    running = thread.running;
 }
 
 print obj.foo; // "test"
@@ -403,11 +411,13 @@ const obj = {
 
 const thread = spawn(new obj, 5) obj.test;
 
-while(thread.running)
+let running = true;
+while(running)
 {
     print sync thread;
     thread.foo = "test";
     thread.resume();
+    running = thread.running;
 }
 
 print thread.foo; // "test"
@@ -467,7 +477,36 @@ When you are completely done with the thread and no longer need its memory, you 
 thread.release();
 ```
 
-Threads usually don't crash the VM on error. Instead they print a stack trace and return. On the other hand, error in the main thread is considered fatal for the VM.
+## Error Handling
+
+Threads usually don't crash the VM on error. Instead they print a stack trace and yield an error value. On the other hand, error in the main thread is considered fatal for the VM.
+
+Manually yielding an error:
+
+```
+func threadFunc()
+{
+    return error("BADBEAF");
+}
+```
+
+Catching errors:
+
+```
+const thread = spawn threadFunc;
+
+let running = true;
+while(running)
+{
+    const result = await thread;
+    if (result: Error)
+    {
+        print result;
+    }
+    
+    running = thread.running;
+}
+```
 
 ## Channels
 

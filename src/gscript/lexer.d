@@ -131,7 +131,8 @@ class GsLexer
         "if", "else", "while", "for", "do", "break", "continue",
         "spawn", "await", "sync", "yield", "shared", "escape",
         "import", "from",
-        "print"
+        "print",
+        "macro"
     ];
     
     string[] operators = [
@@ -139,6 +140,7 @@ class GsLexer
         "=", ">", "<",
         "==", ">=", "<=", "!=",
         "+=", "-=", "*=", "/=",
+        ":",
         ">>", "<<", "<<=", ">>=",
         "&", "&&", "|", "||", "^", "!", "~",
         "&=", "|=", "^=", "~=",
@@ -151,7 +153,7 @@ class GsLexer
     string quotes = "\"\'`";
     
     string[] separators = [
-        ".", ",", ":"
+        ".", ","
     ];
     
     this(string text)

@@ -57,7 +57,8 @@ class GsCodeGenerator
         "<": GsInstructionType.LESS,
         ">": GsInstructionType.GREATER,
         "<=": GsInstructionType.LESS_EQ,
-        ">=": GsInstructionType.GREATER_EQ
+        ">=": GsInstructionType.GREATER_EQ,
+        ":": GsInstructionType.TYPE_IS
     ];
     
     GsInstructionType[string] unaryOperatorMap = [
@@ -65,9 +66,22 @@ class GsCodeGenerator
         "!": GsInstructionType.NOT
     ];
     
+    GsDynamic[string] constants = [
+        "Null": GsDynamic(cast(double)GsDynamicType.Null),
+        "Number": GsDynamic(cast(double)GsDynamicType.Number),
+        "String": GsDynamic(cast(double)GsDynamicType.String),
+        "Array": GsDynamic(cast(double)GsDynamicType.Array),
+        "Object": GsDynamic(cast(double)GsDynamicType.Object),
+        "NativeMethod": GsDynamic(cast(double)GsDynamicType.NativeMethod),
+        "NativeFunction": GsDynamic(cast(double)GsDynamicType.NativeFunction),
+        "Error": GsDynamic(cast(double)GsDynamicType.Error)
+    ];
+    
     string[] builtins = [
         "remove", "removeFront", "removeBack", "insert", "slice"
     ];
+    
+    ASTNode[string] macros;
     
     Scope globalScope;
     
@@ -180,6 +194,14 @@ class GsCodeGenerator
                 if (name == "global")
                 {
                     instructions ~= GsInstruction(GsInstructionType.GLOBAL);
+                }
+                else if (name in constants)
+                {
+                    instructions ~= GsInstruction(GsInstructionType.PUSH, constants[name]);
+                }
+                else if (name in macros)
+                {
+                    instructions ~= generate(macros[name]);
                 }
                 else if (node.programScope.isVariableVisible(name))
                 {
@@ -304,33 +326,60 @@ class GsCodeGenerator
             
             case NodeType.FunctionCallExpression:
                 string funcName = node.value;
-                size_t numParameters = node.children.length;
-                foreach(child; node.children)
-                    instructions ~= generate(child);
-                if (node.programScope.isVariableVisible(funcName))
+                if (funcName in macros)
                 {
-                    // Call by reference
-                    int index = node.programScope.variableIndex(funcName);
-                    instructions ~= GsInstruction(GsInstructionType.LOAD_VAR, GsDynamic(cast(double)index));
-                }
-                else if (node.programScope.isArgumentVisible(funcName))
-                {
-                    // Call by reference
-                    int index = node.programScope.argumentIndex(funcName);
-                    instructions ~= GsInstruction(GsInstructionType.LOAD_ARG, GsDynamic(cast(double)index));
-                }
-                else if (globalScope.isVariableVisible(funcName))
-                {
-                    // Call by global reference
-                    int index = globalScope.variableIndex(funcName);
-                    instructions ~= GsInstruction(GsInstructionType.GLOBAL_LOAD_VAR, GsDynamic(cast(double)index));
+                    // Call by macro substitution
+                    auto macroExpr = macros[funcName];
+                    if (macroExpr.type == NodeType.MemberPropertyAccessExpression)
+                    {
+                        ASTNode leftExpr = macroExpr.children[0];
+                        ASTNode newNode = new ASTNode(NodeType.MemberCallExpression, macroExpr.value, leftExpr ~ node.children);
+                        newNode.programScope = node.programScope;
+                        instructions ~= generate(newNode);
+                    }
+                    else if (macroExpr.type == NodeType.Identifier && macroExpr.value != funcName)
+                    {
+                        ASTNode newNode = new ASTNode(NodeType.FunctionCallExpression, macroExpr.value, node.children);
+                        newNode.programScope = node.programScope;
+                        instructions ~= generate(newNode);
+                    }
+                    else
+                    {
+                        throw new Exception("Cannot substitute a function call with macro \"" ~ funcName ~ "\"");
+                    }
                 }
                 else
                 {
-                    // Call funcName directly
-                    instructions ~= GsInstruction(GsInstructionType.PUSH, GsDynamic(funcName));
+                    size_t numParameters = node.children.length;
+                    foreach(child; node.children)
+                        instructions ~= generate(child);
+                    if (node.programScope.isVariableVisible(funcName))
+                    {
+                        // Call by reference
+                        int index = node.programScope.variableIndex(funcName);
+                        instructions ~= GsInstruction(GsInstructionType.LOAD_VAR, GsDynamic(cast(double)index));
+                    }
+                    else if (node.programScope.isArgumentVisible(funcName))
+                    {
+                        // Call by reference
+                        int index = node.programScope.argumentIndex(funcName);
+                        instructions ~= GsInstruction(GsInstructionType.LOAD_ARG, GsDynamic(cast(double)index));
+                    }
+                    else if (globalScope.isVariableVisible(funcName))
+                    {
+                        // Call by global reference
+                        int index = globalScope.variableIndex(funcName);
+                        instructions ~= GsInstruction(GsInstructionType.GLOBAL_LOAD_VAR, GsDynamic(cast(double)index));
+                    }
+                    else
+                    {
+                        throw new Exception("Undefined function \"" ~ funcName ~ "\"");
+                        
+                        // Call funcName directly
+                        //instructions ~= GsInstruction(GsInstructionType.PUSH, GsDynamic(funcName));
+                    }
+                    instructions ~= GsInstruction(GsInstructionType.CALL, GsDynamic(cast(double)numParameters));
                 }
-                instructions ~= GsInstruction(GsInstructionType.CALL, GsDynamic(cast(double)numParameters));
                 break;
             
             case NodeType.SpawnExpression:
@@ -372,12 +421,16 @@ class GsCodeGenerator
             
             case NodeType.LetStatement:
                 string varName = node.value;
+                if (nameIsDefined(node.programScope, varName))
+                    throw new Exception("Redefinition of \"" ~ varName ~ "\"");
                 node.programScope.defineVariable(varName);
                 instructions ~= generate(node.children[0]);
                 break;
             
             case NodeType.ConstStatement:
                 string varName = node.value;
+                if (nameIsDefined(node.programScope, varName))
+                    throw new Exception("Redefinition of \"" ~ varName ~ "\"");
                 node.programScope.defineVariable(varName, true);
                 instructions ~= generate(node.children[0]);
                 break;
@@ -498,18 +551,21 @@ class GsCodeGenerator
                 string labelEndIf = getLabel();
                 instructions ~= generate(node.children[0]); // condition
                 instructions ~= GsInstruction(GsInstructionType.JMP_IF_NOT, GsDynamic(labelEndIf));
+                instructions ~= GsInstruction(GsInstructionType.POP);
                 instructions ~= generate(node.children[1]); // if-block
                 if (node.children.length > 2)
                 {
                     string labelEndElse = getLabel();
                     instructions ~= GsInstruction(GsInstructionType.JMP, GsDynamic(labelEndElse));
                     instructions ~= GsInstruction(GsInstructionType.LABEL, GsDynamic(labelEndIf));
+                    instructions ~= GsInstruction(GsInstructionType.POP);
                     instructions ~= generate(node.children[2]); // else-block
                     instructions ~= GsInstruction(GsInstructionType.LABEL, GsDynamic(labelEndElse));
                 }
                 else
                 {
                     instructions ~= GsInstruction(GsInstructionType.LABEL, GsDynamic(labelEndIf));
+                    instructions ~= GsInstruction(GsInstructionType.POP);
                 }
                 break;
             
@@ -523,9 +579,11 @@ class GsCodeGenerator
                 instructions ~= GsInstruction(GsInstructionType.LABEL, GsDynamic(labelStartWhile));
                 instructions ~= generate(condition);
                 instructions ~= GsInstruction(GsInstructionType.JMP_IF_NOT, GsDynamic(labelEndWhile));
+                instructions ~= GsInstruction(GsInstructionType.POP);
                 instructions ~= generate(loopBlock);
                 instructions ~= GsInstruction(GsInstructionType.JMP, GsDynamic(labelStartWhile));
                 instructions ~= GsInstruction(GsInstructionType.LABEL, GsDynamic(labelEndWhile));
+                instructions ~= GsInstruction(GsInstructionType.POP);
                 break;
             
             case NodeType.DoWhileStatement:
@@ -536,9 +594,11 @@ class GsCodeGenerator
                 loopBlock.programScope.breakLabel = labelEndWhile;
                 loopBlock.programScope.continueLabel = labelStartWhile;
                 instructions ~= GsInstruction(GsInstructionType.LABEL, GsDynamic(labelStartWhile));
+                instructions ~= GsInstruction(GsInstructionType.POP);
                 instructions ~= generate(loopBlock); // loop
                 instructions ~= generate(condition); // condition
                 instructions ~= GsInstruction(GsInstructionType.JMP_IF, GsDynamic(labelStartWhile));
+                instructions ~= GsInstruction(GsInstructionType.POP);
                 instructions ~= GsInstruction(GsInstructionType.LABEL, GsDynamic(labelEndWhile));
                 break;
             
@@ -555,10 +615,12 @@ class GsCodeGenerator
                 instructions ~= GsInstruction(GsInstructionType.LABEL, GsDynamic(labelStartFor));
                 instructions ~= generate(condition); // condition
                 instructions ~= GsInstruction(GsInstructionType.JMP_IF_NOT, GsDynamic(labelEndFor));
+                instructions ~= GsInstruction(GsInstructionType.POP);
                 instructions ~= generate(loopBlock); // loop
                 instructions ~= generate(advancement); // advancement
                 instructions ~= GsInstruction(GsInstructionType.JMP, GsDynamic(labelStartFor));
                 instructions ~= GsInstruction(GsInstructionType.LABEL, GsDynamic(labelEndFor));
+                instructions ~= GsInstruction(GsInstructionType.POP);
                 break;
             
             case NodeType.BreakStatement:
@@ -577,6 +639,17 @@ class GsCodeGenerator
                     throw new Exception("Illegal \"continue\"");
                 break;
             
+            case NodeType.MacroDefineStatement:
+                if (nameIsDefined(node.programScope, node.value))
+                {
+                    throw new Exception("Redefinition of \"" ~ node.value ~ "\"");
+                }
+                else
+                {
+                    macros[node.value] = node.children[0];
+                }
+                break;
+            
             case NodeType.Function:
                 // No-op
                 break;
@@ -591,6 +664,17 @@ class GsCodeGenerator
         }
         
         return instructions;
+    }
+    
+    bool nameIsDefined(Scope localScope, string name)
+    {
+        return
+            name == "global" ||
+            name in constants ||
+            name in macros ||
+            localScope.isVariableVisible(name) ||
+            localScope.isArgumentVisible(name) ||
+            globalScope.isVariableVisible(name);
     }
     
     void error(string msg)
@@ -619,10 +703,17 @@ class GsCodeGenerator
                     
                     try
                     {
-                        globalScope.defineVariable(func.name, true);
-                        output ~= GsInstruction(GsInstructionType.PUSH, GsDynamic(func.name));
-                        output ~= GsInstruction(GsInstructionType.STORE_VAR, GsDynamic(cast(double)numFunctions));
-                        numFunctions++;
+                        if (nameIsDefined(func.programScope, func.value))
+                        {
+                            throw new Exception("Redefinition of \"" ~ func.value ~ "\"");
+                        }
+                        else
+                        {
+                            globalScope.defineVariable(func.name, true);
+                            output ~= GsInstruction(GsInstructionType.PUSH, GsDynamic(func.name));
+                            output ~= GsInstruction(GsInstructionType.STORE_VAR, GsDynamic(cast(double)numFunctions));
+                            numFunctions++;
+                        }
                     }
                     catch(Exception e)
                     {
