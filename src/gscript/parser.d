@@ -1360,15 +1360,23 @@ class GsParser
         }
         else if (currentToken.value == "macro")
         {
-            eat(GsTokenType.Keyword); // macro
-            string macroName = currentToken.value;
-            eat(GsTokenType.Identifier); // macroName
-            eat("=");
-            ASTNode macroExpr = parseExpression();
-            eat(GsTokenType.Semicolon); // ';'
-            auto stat = new ASTNode(NodeType.MacroDefineStatement, macroName, [macroExpr]);
-            stat.programScope = program.peekScope();
-            return stat;
+            if (program.isRootScope)
+            {
+                eat(GsTokenType.Keyword); // macro
+                string macroName = currentToken.value;
+                eat(GsTokenType.Identifier); // macroName
+                eat("=");
+                ASTNode macroExpr = parseExpression();
+                eat(GsTokenType.Semicolon); // ';'
+                auto stat = new ASTNode(NodeType.MacroDefineStatement, macroName, [macroExpr]);
+                stat.programScope = program.peekScope();
+                return stat;
+            }
+            else
+            {
+                stop("Macros are only allowed in the global scope");
+                return null;
+            }
         }
         else
         {

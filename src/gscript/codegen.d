@@ -102,7 +102,8 @@ class GsCodeGenerator
         if (node.type == NodeType.FunctionLiteral)
         {
             auto func = cast(ASTFunctionLiteral)node;
-            // TODO: qualified name
+            
+            // Function label
             instructions ~= GsInstruction(GsInstructionType.LABEL, GsDynamic(func.label));
             
             // Function body
@@ -201,7 +202,16 @@ class GsCodeGenerator
                 }
                 else if (name in macros)
                 {
-                    instructions ~= generate(macros[name]);
+                    auto macroExpr = macros[name];
+                    if (macroExpr.type == NodeType.FunctionLiteral)
+                    {
+                        auto func = cast(ASTFunctionLiteral)macroExpr;
+                        instructions ~= GsInstruction(GsInstructionType.PUSH, GsDynamic(func.label));
+                    }
+                    else
+                    {
+                        instructions ~= generate(macros[name]);
+                    }
                 }
                 else if (node.programScope.isVariableVisible(name))
                 {
@@ -330,7 +340,16 @@ class GsCodeGenerator
                 {
                     // Call by macro substitution
                     auto macroExpr = macros[funcName];
-                    if (macroExpr.type == NodeType.MemberPropertyAccessExpression)
+                    if (macroExpr.type == NodeType.FunctionLiteral)
+                    {
+                        auto func = cast(ASTFunctionLiteral)macroExpr;
+                        size_t numParameters = node.children.length;
+                        foreach(child; node.children)
+                            instructions ~= generate(child);
+                        instructions ~= GsInstruction(GsInstructionType.PUSH, GsDynamic(func.label));
+                        instructions ~= GsInstruction(GsInstructionType.CALL, GsDynamic(cast(double)numParameters));
+                    }
+                    else if (macroExpr.type == NodeType.MemberPropertyAccessExpression)
                     {
                         ASTNode leftExpr = macroExpr.children[0];
                         ASTNode newNode = new ASTNode(NodeType.MemberCallExpression, macroExpr.value, leftExpr ~ node.children);
@@ -647,7 +666,15 @@ class GsCodeGenerator
                     else if (eval.type == GsDynamicType.String)
                         macros[node.value] = new ASTNode(NodeType.StringLiteral, "\"" ~ eval.asString ~ "\"");
                     else
-                        macros[node.value] = node.children[0];
+                    {
+                        auto macroExpr = node.children[0];
+                        macros[node.value] = macroExpr;
+                        if (macroExpr.type == NodeType.FunctionLiteral)
+                        {
+                            auto func = cast(ASTFunctionLiteral)macroExpr;
+                            func.label = getLabel();
+                        }
+                    }
                 }
                 break;
             
