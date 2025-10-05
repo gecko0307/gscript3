@@ -238,6 +238,11 @@ class GsVirtualMachine: Owner, GsObject
             writefln("  in \"%s\":", currentThread.callFrames[tracei].name);
         }
         writefln(fmt, args);
+        
+        GsDynamic errorValue = GsDynamic("fatality");
+        errorValue.type = GsDynamicType.Error;
+        currentThread.yieldValue = errorValue;
+        
         if (currentThread is mainThread)
             finalize();
         else
@@ -1387,6 +1392,19 @@ class GsVirtualMachine: Owner, GsObject
                         {
                             fatality("Attempting to sync %s, which is not a thread", param.type);
                             //return;
+                        }
+                        break;
+                    case GsInstructionType.ERROR:
+                        auto param = tr.pop();
+                        if (param.type == GsDynamicType.String)
+                        {
+                            GsDynamic errorValue = param;
+                            errorValue.type = GsDynamicType.Error;
+                            tr.push(errorValue);
+                        }
+                        else
+                        {
+                            fatality("Error value cannot be constructed from %s", param.type);
                         }
                         break;
                     case GsInstructionType.HALT:

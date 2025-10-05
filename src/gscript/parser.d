@@ -37,6 +37,7 @@ import gscript.lexer;
 enum NodeType
 {
     NullLiteral,
+    ErrorLiteral,
     NumberLiteral,
     StringLiteral,
     BooleanLiteral,
@@ -834,6 +835,19 @@ class GsParser
         {
             eat(GsTokenType.Keyword); // "null"
             auto node = new ASTNode(NodeType.NullLiteral, "");
+            return node;
+        }
+        else if (currentToken.value == "error")
+        {
+            eat(GsTokenType.Keyword); // "error"
+            ASTNode errorParams = new ASTNode(NodeType.ParametersExpression, "");
+            errorParams.programScope = program.peekScope();
+            if (currentToken.type == GsTokenType.OpeningBracket)
+            {
+                parseList(errorParams);
+            }
+            auto node = new ASTNode(NodeType.ErrorLiteral, "", [errorParams]);
+            node.programScope = program.peekScope();
             return node;
         }
         else if (currentToken.value == "new")

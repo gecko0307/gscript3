@@ -125,7 +125,7 @@ struct GsDynamic
             case GsDynamicType.NativeFunction:
                 return "function";
             case GsDynamicType.Error:
-                return "error";
+                return asString;
             default:
                 return "null";
         }

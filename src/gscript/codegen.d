@@ -129,6 +129,15 @@ class GsCodeGenerator
                 instructions ~= GsInstruction(GsInstructionType.PUSH, GsDynamic());
                 break;
             
+            case NodeType.ErrorLiteral:
+                auto params = node.children[0];
+                if (params.children.length)
+                    instructions ~= generate(params.children[0]);
+                else
+                    instructions ~= GsInstruction(GsInstructionType.PUSH, GsDynamic(""));
+                instructions ~= GsInstruction(GsInstructionType.ERROR);
+                break;
+            
             case NodeType.NumberLiteral:
                 instructions ~= GsInstruction(GsInstructionType.PUSH, GsDynamic(node.value.to!double));
                 break;
