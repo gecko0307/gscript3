@@ -97,42 +97,49 @@ class GsCodeGenerator
         return "label" ~ to!string(numLabels++);
     }
     
+    string[] functions;
+    
     this()
     {
     }
     
     ASTNode specialize(ASTNode node, string[] params, ASTNode[] arguments)
     {
-        if (node.type == NodeType.Identifier)
+        if (node.type == NodeType.MacroBlockExpression)
         {
-            for(size_t i = 0; i < params.length; i++)
-            {
-                if (node.value == params[i])
-                {
-                    return arguments[i];
-                }
-            }
-        }
-        else if (node.type == NodeType.MacroBlockExpression)
-        {
-            auto macroBlockExpr = cast(ASTMacroBlockExpression)node;
-            auto block = macroBlockExpr.bodyBlock;
-            for(size_t i = 0; i < block.children.length; i++)
-            {
-                block.children[i] = specialize(block.children[i], params, arguments);
-            }
+            throw new Exception("Macro block expanding is not supported");
         }
         else if (node.type == NodeType.FunctionLiteral)
         {
-            auto func = cast(ASTFunctionLiteral)node;
-            auto block = func.bodyBlock;
-            for(size_t i = 0; i < block.children.length; i++)
-            {
-                block.children[i] = specialize(block.children[i], params, arguments);
-            }
+            throw new Exception("Macro function expanding is not supported");
         }
         else
         {
+            if (node.type == NodeType.Identifier)
+            {
+                for(size_t i = 0; i < params.length; i++)
+                {
+                    if (node.value == params[i])
+                    {
+                        return arguments[i];
+                    }
+                }
+            }
+            else if (node.type == NodeType.MemberPropertyAccessExpression)
+            {
+                for(size_t i = 0; i < params.length; i++)
+                {
+                    if (node.value == params[i])
+                    {
+                        auto propNode = new ASTNode(NodeType.MemberPropertyAccessExpression, arguments[i].value);
+                        propNode.programScope = node.programScope;
+                        propNode.children ~= node.children[0];
+                        node = propNode;
+                        break;
+                    }
+                }
+            }
+            
             for(size_t i = 0; i < node.children.length; i++)
             {
                 auto specializedMacro = specialize(node.children[i], params, arguments);
@@ -163,15 +170,20 @@ class GsCodeGenerator
         {
             auto func = cast(ASTFunctionLiteral)node;
             
-            // Function label
-            instructions ~= GsInstruction(GsInstructionType.LABEL, GsDynamic(func.label));
-            
-            // Function body
-            instructions ~= generate(func.bodyBlock);
-            
-            // Return null by default
-            instructions ~= GsInstruction(GsInstructionType.PUSH, GsDynamic());
-            instructions ~= GsInstruction(GsInstructionType.RET);
+            if (!functions.canFind(func.label))
+            {
+                // Function label
+                instructions ~= GsInstruction(GsInstructionType.LABEL, GsDynamic(func.label));
+                
+                // Function body
+                instructions ~= generate(func.bodyBlock);
+                
+                // Return null by default
+                instructions ~= GsInstruction(GsInstructionType.PUSH, GsDynamic());
+                instructions ~= GsInstruction(GsInstructionType.RET);
+                
+                functions ~= func.label;
+            }
         }
         else if (node.type == NodeType.Function)
         {
@@ -184,10 +196,10 @@ class GsCodeGenerator
         else if (node.type == NodeType.MacroBlockExpression)
         {
             auto macroBlockExpr = cast(ASTMacroBlockExpression)node;
-            auto block = macroBlockExpr.bodyBlock;
-            for(size_t i = 0; i < block.children.length; i++)
+            auto macroBlock = macroBlockExpr.bodyBlock;
+            for(size_t i = 0; i < macroBlock.children.length; i++)
             {
-                instructions ~= generateLambdas(block.children[i]);
+                instructions ~= generateLambdas(macroBlock.children[i]);
             }
         }
         else if (node.type == NodeType.MacroSpecializationExpression)
@@ -401,7 +413,7 @@ class GsCodeGenerator
                 }
                 else if (node.programScope.isVariableVisible(name))
                 {
-                    GsVariable* v = node.programScope.getVariable(name);
+                    GsVariable v = node.programScope.getVariable(name);
                     if (v.isConst && v.isInitialized)
                         throw new Exception("Assignment to constant variable \"" ~ name ~ "\"");
                     
@@ -416,7 +428,7 @@ class GsCodeGenerator
                 }
                 else if (globalScope.isVariableVisible(name))
                 {
-                    GsVariable* v = globalScope.getVariable(name);
+                    GsVariable v = globalScope.getVariable(name);
                     if (v.isConst && v.isInitialized)
                         throw new Exception("Assignment to constant variable \"" ~ name ~ "\"");
                     
@@ -482,35 +494,15 @@ class GsCodeGenerator
                 break;
             
             case NodeType.MacroFunctionExpand:
-                /*
-                auto macroFuncExpand = cast(ASTMacroFunctionExpand)node;
-                auto macroSpecExpr = macroFuncExpand.macroSpecExpression;
-                auto funcCallExpr = macroFuncExpand.funcCallExpression;
-                string funcName = macroSpecExpr.value;
-                if (funcName in macros)
-                {
-                    auto macroExpr = macros[funcName];
-                    if (macroExpr.type == NodeType.FunctionLiteral)
-                    {
-                        auto func = cast(ASTFunctionLiteral)macroExpr;
-                        size_t numParameters = funcCallExpr.children.length;
-                        foreach(child; funcCallExpr.children)
-                            instructions ~= generate(child);
-                        
-                        instructions ~= GsInstruction(GsInstructionType.PUSH, GsDynamic(funcCallExpr.value));
-                        instructions ~= GsInstruction(GsInstructionType.CALL, GsDynamic(cast(double)numParameters));
-                    }
-                }
-                */
-                throw new Exception("Macro function expanding is not supported yet");
+                throw new Exception("Macro function expanding is not supported");
                 break;
             
             case NodeType.FunctionCallExpression:
                 string funcName = node.value;
                 if (funcName in macros)
                 {
-                    // Call by macro substitution
                     auto macroExpr = macros[funcName];
+                    /*
                     if (macroExpr.type == NodeType.FunctionLiteral)
                     {
                         auto func = cast(ASTFunctionLiteral)macroExpr;
@@ -520,7 +512,9 @@ class GsCodeGenerator
                         instructions ~= GsInstruction(GsInstructionType.PUSH, GsDynamic(func.label));
                         instructions ~= GsInstruction(GsInstructionType.CALL, GsDynamic(cast(double)numParameters));
                     }
-                    else if (macroExpr.type == NodeType.MemberPropertyAccessExpression)
+                    else
+                    */
+                    if (macroExpr.type == NodeType.MemberPropertyAccessExpression)
                     {
                         ASTNode leftExpr = macroExpr.children[0];
                         ASTNode newNode = new ASTNode(NodeType.MemberCallExpression, macroExpr.value, leftExpr ~ node.children);
@@ -635,16 +629,16 @@ class GsCodeGenerator
             
             case NodeType.LetStatement:
                 string varName = node.value;
-                if (nameIsDefined(node.programScope, varName))
-                    throw new Exception("Redefinition of \"" ~ varName ~ "\"");
+                //if (nameIsDefined(node.programScope, varName))
+                //    throw new Exception("Redefinition of \"" ~ varName ~ "\"");
                 node.programScope.defineVariable(varName);
                 instructions ~= generate(node.children[0]);
                 break;
             
             case NodeType.ConstStatement:
                 string varName = node.value;
-                if (nameIsDefined(node.programScope, varName))
-                    throw new Exception("Redefinition of \"" ~ varName ~ "\"");
+                //if (nameIsDefined(node.programScope, varName))
+                //    throw new Exception("Redefinition of \"" ~ varName ~ "\"");
                 node.programScope.defineVariable(varName, true);
                 instructions ~= generate(node.children[0]);
                 break;
@@ -886,7 +880,8 @@ class GsCodeGenerator
                         if (macroExpr.type == NodeType.FunctionLiteral)
                         {
                             auto func = cast(ASTFunctionLiteral)macroExpr;
-                            func.label = getLabel();
+                            //if (func.label.length == 0)
+                            //    func.label = getLabel();
                         }
                     }
                 }

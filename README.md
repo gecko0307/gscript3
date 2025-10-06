@@ -637,20 +637,9 @@ macro PI2 = PI * 2;
 print PI2;
 ```
 
-Currenty macro evaluation is only supported for numbers and strings.
+Compile-time evaluation is only supported for basic numeric operations and string concatenation.
 
-Function macros can be used to define compile-time aliases for anonymous functions, which is useful if you don't want to waste a global variable for a function:
-
-```
-macro fun = func(x) {
-    print x;
-};
-
-fun(100);
-fun(200);
-```
-
-There is basic support for parameterized macro expansion, which makes macros idiomatically close to templates. Unlike template specialization, macro expansion substitutes named parameters with AST expressions rather than data types:
+There is support for parameterized macro expansion, which makes macros idiomatically close to templates. Unlike template specialization, macro expansion substitutes named parameters with AST expressions rather than data types:
 
 ```
 macro sum(a, b) = a + b;
@@ -669,6 +658,6 @@ const x = 10;
 print sum{x, 4}; // print x + 4
 ```
 
-Function macros don't support parameterized expansion.
-
 In contrast to global variables and functions, macros are defined in module's local context and cannot be imported.
+
+Function macros and statement macros are not supported at the moment.

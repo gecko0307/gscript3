@@ -171,12 +171,22 @@ bool isMulDivMod(GsToken token)
            mulDivModOperators.canFind(token.value);
 }
 
-struct GsVariable
+class GsVariable
 {
+    Scope ownerScope;
     int index;
     bool isConst;
     bool isInitialized;
     int depth;
+    
+    this(Scope ownerScope, int index, bool isConst, bool isInitialized, int depth)
+    {
+        this.ownerScope = ownerScope;
+        this.index = index;
+        this.isConst = isConst;
+        this.isInitialized = isInitialized;
+        this.depth = depth;
+    }
 }
 
 class Scope
@@ -215,7 +225,7 @@ class Scope
         if (!(name in arguments) && !(name in variables))
         {
             int index = nextArgumentIndex;
-            arguments[name] = GsVariable(index, false, false);
+            arguments[name] = new GsVariable(this, index, false, false, 0);
             nextArgumentIndex++;
             return index;
         }
@@ -225,31 +235,52 @@ class Scope
         }
     }
     
-    protected int defineVariable(int depth, string name, bool isConst = false)
+    protected int defineVariable(Scope ownerScope, int depth, string name, bool isConst = false)
     {
         if (parent is null)
         {
-            if (!(name in variables) && !(name in arguments))
+            if (!(name in arguments))
             {
-                int index = nextLocalIndex;
-                variables[name] = GsVariable(index, isConst, false, depth);
-                nextLocalIndex++;
-                return index;
+                if (name in variables)
+                {
+                    GsVariable v = variables[name];
+                    debug writeln(v.ownerScope !is this, " ", depth, " < ", v.depth);
+                    // Reuse variable if it was defined in deeper or neighbouring scope
+                    if (v.ownerScope !is this && depth <= v.depth)
+                    {
+                        v.ownerScope = ownerScope;
+                        v.isConst = isConst;
+                        v.isInitialized = false;
+                        v.depth = depth;
+                        return v.index;
+                    }
+                    else
+                    {
+                        throw new Exception("Redefinition of variable \"" ~ name ~ "\"");
+                    }
+                }
+                else
+                {
+                    int index = nextLocalIndex;
+                    variables[name] = new GsVariable(ownerScope, index, isConst, false, depth);
+                    nextLocalIndex++;
+                    return index;
+                }
             }
             else
             {
-                throw new Exception("Redefinition of variable \"" ~ name ~ "\"");
+                throw new Exception("Variable \"" ~ name ~ "\" is shadowing argument \"" ~ name ~ "\"");
             }
         }
         else
         {
-            return parent.defineVariable(depth, name, isConst);
+            return parent.defineVariable(ownerScope, depth, name, isConst);
         }
     }
     
     int defineVariable(string name, bool isConst = false)
     {
-        return defineVariable(nestingDepth, name, isConst);
+        return defineVariable(this, nestingDepth, name, isConst);
     }
     
     bool isArgumentVisible(string name)
@@ -280,11 +311,11 @@ class Scope
         return isVariableVisible(name, nestingDepth);
     }
     
-    GsVariable* getVariable(string name)
+    GsVariable getVariable(string name)
     {
         GsVariable* v = name in variables;
         if (v)
-            return v;
+            return *v;
         else if (parent)
             return parent.getVariable(name);
         else
@@ -903,12 +934,13 @@ class GsParser
         }
         else if (currentToken.type == GsTokenType.OpeningDoubleCurlyBracket)
         {
-            ASTBlock block = new ASTBlock();
-            auto node = new ASTMacroBlockExpression(block);
-            node.programScope = program.peekScope();
-            block.programScope = program.pushScope(true);
-            parseMacroBlock(block);
+            ASTBlock macroBlock = new ASTBlock();
+            macroBlock.programScope = program.pushScope(true);
+            parseMacroBlock(macroBlock);
             program.popScope();
+            
+            auto node = new ASTMacroBlockExpression(macroBlock);
+            node.programScope = program.peekScope();
             return node;
         }
         else if (currentToken.value == "$")
