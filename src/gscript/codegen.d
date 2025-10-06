@@ -139,6 +139,10 @@ class GsCodeGenerator
                     }
                 }
             }
+            else
+            {
+                node = node.shallowCopy();
+            }
             
             for(size_t i = 0; i < node.children.length; i++)
             {

@@ -412,6 +412,20 @@ class ASTNode
         else
             return "";
     }
+    
+    ASTNode shallowCopy()
+    {
+        ASTNode newNode = new ASTNode(type, value);
+        newNode.programScope = programScope;
+        newNode.isConst = isConst;
+        newNode.sharedAccess = sharedAccess;
+        newNode.macroParameters = macroParameters;
+        foreach(child; children)
+        {
+            newNode.children ~= child;
+        }
+        return newNode;
+    }
 }
 
 class ASTBlock: ASTNode
