@@ -21,7 +21,7 @@ print "Hello, World!";
 * [x] Basic build system
 * [x] Expose command line arguments
 * [x] Error handling
-* [x] Macros with compile-time evaluation
+* [x] Macros, compile-time evaluation
 * [ ] Standard library
 
 ## Why GScript3?
@@ -45,7 +45,7 @@ Most popular scripting engines are too cumbersome for embedding in languages oth
 - Array length is now returned by the built-in `length` property instead of a global `length` function
 - `print` instead of `writeln`
 - Spawning functions as threads/coroutines; see below
-- Macros; see below.
+- AST macros; see below.
 
 Architecture improvements:
 - Fast VM with a more efficient ISA
@@ -651,7 +651,7 @@ fun(100);
 fun(200);
 ```
 
-There is limited support for parameterized macro expansion, which makes macros idiomatically close to templates in D. Unlike template specialization, macro expansion substitutes named parameters with AST expressions rather than data types:
+There is basic support for parameterized macro expansion, which makes macros idiomatically close to templates. Unlike template specialization, macro expansion substitutes named parameters with AST expressions rather than data types:
 
 ```
 macro sum(a, b) = a + b;
