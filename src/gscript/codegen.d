@@ -113,6 +113,24 @@ class GsCodeGenerator
                 }
             }
         }
+        else if (node.type == NodeType.MacroBlockExpression)
+        {
+            auto macroBlockExpr = cast(ASTMacroBlockExpression)node;
+            auto block = macroBlockExpr.bodyBlock;
+            for(size_t i = 0; i < block.children.length; i++)
+            {
+                block.children[i] = specialize(block.children[i], params, arguments);
+            }
+        }
+        else if (node.type == NodeType.FunctionLiteral)
+        {
+            auto func = cast(ASTFunctionLiteral)node;
+            auto block = func.bodyBlock;
+            for(size_t i = 0; i < block.children.length; i++)
+            {
+                block.children[i] = specialize(block.children[i], params, arguments);
+            }
+        }
         else
         {
             for(size_t i = 0; i < node.children.length; i++)
@@ -156,6 +174,49 @@ class GsCodeGenerator
             if (instr.length)
                 instructions ~= instr;
         }
+        else if (node.type == NodeType.MacroBlockExpression)
+        {
+            auto macroBlockExpr = cast(ASTMacroBlockExpression)node;
+            auto block = macroBlockExpr.bodyBlock;
+            for(size_t i = 0; i < block.children.length; i++)
+            {
+                instructions ~= generateLambdas(block.children[i]);
+            }
+        }
+        else if (node.type == NodeType.MacroSpecializationExpression)
+        {
+            string name = node.value;
+            if (name in macros)
+            {
+                auto macroExpr = macros[name];
+                if (macroExpr.macroParameters.length != node.children.length)
+                {
+                    throw new Exception("Invalid specialization arguments for macro \"" ~ name ~ "\"");
+                }
+                else
+                {
+                    auto specializedMacro = specializeMacro(macroExpr, node.children);
+                    GsDynamic eval = evaluate(specializedMacro);
+                    if (eval.type != GsDynamicType.Null)
+                        instructions ~= GsInstruction(GsInstructionType.PUSH, eval);
+                    else
+                        instructions ~= generateLambdas(specializedMacro);
+                }
+            }
+            else
+            {
+                throw new Exception("Undefined macro \"" ~ name ~ "\"");
+            }
+        }
+        else if (node.type == NodeType.MacroDefineStatement)
+        {
+            if (node.children[0].type == NodeType.FunctionLiteral)
+            {
+                if (node.children[0].macroParameters.length > 0)
+                    throw new Exception("Parametrized function macros are not supported");
+                instructions ~= generateLambdas(node.children[0]);
+            }
+        }
         else
         {
             foreach(child; node.children)
@@ -175,6 +236,10 @@ class GsCodeGenerator
         
         switch(node.type)
         {
+            case NodeType.Undefined:
+                throw new Exception("Undefined AST node");
+                break;
+            
             case NodeType.NullLiteral:
                 instructions ~= GsInstruction(GsInstructionType.PUSH, GsDynamic());
                 break;
@@ -409,6 +474,30 @@ class GsCodeGenerator
                 }
                 break;
             
+            case NodeType.MacroFunctionExpand:
+                /*
+                auto macroFuncExpand = cast(ASTMacroFunctionExpand)node;
+                auto macroSpecExpr = macroFuncExpand.macroSpecExpression;
+                auto funcCallExpr = macroFuncExpand.funcCallExpression;
+                string funcName = macroSpecExpr.value;
+                if (funcName in macros)
+                {
+                    auto macroExpr = macros[funcName];
+                    if (macroExpr.type == NodeType.FunctionLiteral)
+                    {
+                        auto func = cast(ASTFunctionLiteral)macroExpr;
+                        size_t numParameters = funcCallExpr.children.length;
+                        foreach(child; funcCallExpr.children)
+                            instructions ~= generate(child);
+                        
+                        instructions ~= GsInstruction(GsInstructionType.PUSH, GsDynamic(funcCallExpr.value));
+                        instructions ~= GsInstruction(GsInstructionType.CALL, GsDynamic(cast(double)numParameters));
+                    }
+                }
+                */
+                throw new Exception("Macro function expanding is not supported yet");
+                break;
+            
             case NodeType.FunctionCallExpression:
                 string funcName = node.value;
                 if (funcName in macros)
@@ -436,6 +525,10 @@ class GsCodeGenerator
                         ASTNode newNode = new ASTNode(NodeType.FunctionCallExpression, macroExpr.value, node.children);
                         newNode.programScope = node.programScope;
                         instructions ~= generate(newNode);
+                    }
+                    else if (macroExpr.type == NodeType.MacroSpecializationExpression)
+                    {
+                        throw new Exception("Expanding macro function calls are not supported yet");
                     }
                     else
                     {
@@ -513,6 +606,26 @@ class GsCodeGenerator
                 instructions ~= GsInstruction(GsInstructionType.ESCAPE);
                 break;
             
+            case NodeType.NoopStatement:
+                string name = node.value;
+                if (name in macros)
+                {
+                    auto macroExpr = macros[name];
+                    if (macroExpr.macroParameters.length > 0)
+                    {
+                        throw new Exception("Specialization required for macro \"" ~ name ~ "\"");
+                    }
+                    else
+                    {
+                        instructions ~= generate(macroExpr);
+                    }
+                }
+                else
+                {
+                    writefln("Warning: unrecognized no-op statement \"%s\"", name);
+                }
+                break;
+            
             case NodeType.LetStatement:
                 string varName = node.value;
                 if (nameIsDefined(node.programScope, varName))
@@ -533,7 +646,8 @@ class GsCodeGenerator
                 if (node.sharedAccess)
                     node.children[0].sharedAccess = node.sharedAccess;
                 instructions ~= generate(node.children[0]);
-                instructions ~= GsInstruction(GsInstructionType.POP);
+                if (node.children[0].type != NodeType.MacroSpecializationExpression)
+                    instructions ~= GsInstruction(GsInstructionType.POP);
                 break;
             
             case NodeType.ReturnStatement:
@@ -746,11 +860,13 @@ class GsCodeGenerator
                 else
                 {
                     auto macroExpr = node.children[0];
+                    /*
                     if (macroExpr.type == NodeType.FunctionLiteral)
                     {
                         if (macroExpr.macroParameters.length > 0)
                             throw new Exception("Specialization parameters are not supported for function macros");
                     }
+                    */
                     
                     GsDynamic eval = evaluate(node.children[0]);
                     if (eval.type == GsDynamicType.Number)
@@ -767,6 +883,11 @@ class GsCodeGenerator
                         }
                     }
                 }
+                break;
+            
+            case NodeType.MacroBlockExpression:
+                auto macroBlockExpr = cast(ASTMacroBlockExpression)node;
+                instructions ~= generate(macroBlockExpr.bodyBlock);
                 break;
             
             case NodeType.Function:

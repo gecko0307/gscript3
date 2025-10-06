@@ -36,6 +36,7 @@ import gscript.lexer;
 
 enum NodeType
 {
+    Undefined,
     NullLiteral,
     NanLiteral,
     InfLiteral,
@@ -65,6 +66,7 @@ enum NodeType
     BreakStatement,
     ContinueStatement,
     MacroDefineStatement,
+    NoopStatement,
     Block,
     FunctionCallExpression,
     IndexAccessExpression,
@@ -83,7 +85,9 @@ enum NodeType
     SharedExpression,
     EscapeExpression,
     TypeExpression,
-    MacroSpecializationExpression
+    MacroSpecializationExpression,
+    MacroBlockExpression,
+    MacroFunctionExpand
 }
 
 immutable string[] assignOperators = [
@@ -355,7 +359,7 @@ class ASTNode
     
     void print(string indent = "")
     {
-        writeln(indent, type, " ", value);
+        writeln(indent, type, " ", value, " ", (macroParameters.length > 0 ? macroParameters.to!string : ""));
         foreach(ASTNode child; children)
         {
             child.print(indent ~ "  ");
@@ -413,7 +417,7 @@ class ASTFunction: ASTNode
     
     override void print(string indent = "")
     {
-        writeln(indent, type, " ", name);
+        writeln(indent, type, " ", name, (macroParameters.length > 0 ? macroParameters.to!string : ""));
         foreach(ASTNode child; bodyBlock.children)
         {
             child.print(indent ~ "  ");
@@ -437,7 +441,7 @@ class ASTFunctionLiteral: ASTNode
     
     override void print(string indent = "")
     {
-        writeln(indent, type);
+        writeln(indent, type, " ", (macroParameters.length > 0 ? macroParameters.to!string : ""));
         foreach(ASTNode child; bodyBlock.children)
         {
             child.print(indent ~ "  ");
@@ -445,24 +449,45 @@ class ASTFunctionLiteral: ASTNode
     }
 }
 
-/*
-class ASTMacroStatement: ASTNode
+class ASTMacroFunctionExpand: ASTNode
 {
-    string[] parameters;
+    ASTNode macroSpecExpression;
+    ASTNode funcCallExpression;
     
-    this(string name, string[] parameters, ASTNode expression)
+    this(ASTNode macroSpecExpression, ASTNode funcCallExpression)
     {
-        super(NodeType.MacroDefineStatement, name, [expression]);
-        this.parameters = parameters;
+        super(NodeType.MacroFunctionExpand, macroSpecExpression.value);
+        this.macroSpecExpression = macroSpecExpression;
+        this.funcCallExpression = funcCallExpression;
     }
     
     override void print(string indent = "")
     {
         writeln(indent, type);
-        children[0].print(indent ~ "  ");
+        macroSpecExpression.print(indent ~ "  ");
+        funcCallExpression.print(indent ~ "  ");
     }
 }
-*/
+
+class ASTMacroBlockExpression: ASTNode
+{
+    ASTBlock bodyBlock;
+    
+    this(ASTBlock bodyBlock)
+    {
+        super(NodeType.MacroBlockExpression, "");
+        this.bodyBlock = bodyBlock;
+    }
+    
+    override void print(string indent = "")
+    {
+        writeln(indent, type, " ", (macroParameters.length > 0 ? macroParameters.to!string : ""));
+        foreach(ASTNode child; bodyBlock.children)
+        {
+            child.print(indent ~ "  ");
+        }
+    }
+}
 
 class GsModule
 {
@@ -588,6 +613,7 @@ class GsParser
     GsModule modul;
     bool isImport = false;
     bool running = false;
+    ASTNode undefinedNode;
 
    public:
     this(GsLexer lexer, string filename, bool isImport = false)
@@ -597,6 +623,7 @@ class GsParser
         this.currentToken = lexer.nextToken();
         this.isImport = isImport;
         running = true;
+        undefinedNode = new ASTNode(NodeType.Undefined, "");
     }
     
     void stop(string msg)
@@ -874,6 +901,16 @@ class GsParser
             parseObject(node);
             return node;
         }
+        else if (currentToken.type == GsTokenType.OpeningDoubleCurlyBracket)
+        {
+            ASTBlock block = new ASTBlock();
+            auto node = new ASTMacroBlockExpression(block);
+            node.programScope = program.peekScope();
+            block.programScope = program.pushScope(true);
+            parseMacroBlock(block);
+            program.popScope();
+            return node;
+        }
         else if (currentToken.value == "$")
         {
             eat(GsTokenType.Operator); // "$"
@@ -894,7 +931,7 @@ class GsParser
             else
             {
                 stop("Unexpected token \"" ~ currentToken.value ~ "\" in argument expression");
-                return null;
+                return undefinedNode;
             }
         }
         else if (currentToken.value == "null")
@@ -1060,9 +1097,22 @@ class GsParser
             else if (currentToken.type == GsTokenType.OpeningCurlyBracket)
             {
                 // Macro specialization
-                node = new ASTNode(NodeType.MacroSpecializationExpression, name);
-                node.programScope = program.peekScope();
-                parseSpecializationArguments(node);
+                ASTNode macroSpecNode = new ASTNode(NodeType.MacroSpecializationExpression, name);
+                macroSpecNode.programScope = program.peekScope();
+                parseSpecializationArguments(macroSpecNode);
+
+                if (currentToken.type == GsTokenType.OpeningBracket)
+                {
+                    // Function call
+                    auto funcCallNode = new ASTNode(NodeType.FunctionCallExpression, "");
+                    funcCallNode.programScope = program.peekScope();
+                    parseList(funcCallNode);
+                    
+                    node = new ASTMacroFunctionExpand(macroSpecNode, funcCallNode);
+                    node.programScope = program.peekScope();
+                }
+                else
+                    node = macroSpecNode;
             }
             else
             {
@@ -1083,7 +1133,7 @@ class GsParser
         else
         {
             stop("Unexpected token \"" ~ currentToken.value ~ "\" in terminal expression");
-            return null;
+            return undefinedNode;
         }
     }
     
@@ -1209,7 +1259,7 @@ class GsParser
             else
             {
                 stop("\"while\" expected, not \"" ~ currentToken.value ~ "\"");
-                return null;
+                return undefinedNode;
             }
         }
         else if (currentToken.value == "for")
@@ -1278,7 +1328,7 @@ class GsParser
             else
             {
                 stop("Nested free functions are not allowed");
-                return null;
+                return undefinedNode;
             }
         }
         else if (currentToken.value == "print")
@@ -1377,7 +1427,7 @@ class GsParser
                 if (currentToken.value != "from")
                 {
                     stop("\"from\" expected, not \"" ~ currentToken.value ~ "\"");
-                    return null;
+                    return undefinedNode;
                 }
                 eat(GsTokenType.Keyword); // from
                 
@@ -1388,7 +1438,7 @@ class GsParser
                 else
                 {
                     stop("Illegal import: " ~ importFilename);
-                    return null;
+                    return undefinedNode;
                 }
                 
                 eat(GsTokenType.Semicolon); // ";"
@@ -1420,12 +1470,12 @@ class GsParser
                     return importStat;
                 }
                 else
-                    return null;
+                    return undefinedNode;
             }
             else
             {
                 stop("Nested free functions are not allowed");
-                return null;
+                return undefinedNode;
             }
         }
         else if (currentToken.value == "macro")
@@ -1451,16 +1501,25 @@ class GsParser
             else
             {
                 stop("Macros are only allowed in the global scope");
-                return null;
+                return undefinedNode;
             }
         }
         else
         {
             ASTNode expr = parseExpression();
             eat(GsTokenType.Semicolon); // ';'
-            auto stat = new ASTNode(NodeType.ExpressionStatement, "", [expr]);
-            stat.programScope = program.peekScope();
-            return stat;
+            if (expr.type == NodeType.Identifier)
+            {
+                auto stat = new ASTNode(NodeType.NoopStatement, expr.value);
+                stat.programScope = program.peekScope();
+                return stat;
+            }
+            else
+            {
+                auto stat = new ASTNode(NodeType.ExpressionStatement, "", [expr]);
+                stat.programScope = program.peekScope();
+                return stat;
+            }
         }
     }
     
@@ -1526,6 +1585,23 @@ class GsParser
             }
         }
         eat(GsTokenType.ClosingCurlyBracket); // }
+    }
+    
+    void parseMacroBlock(ASTBlock block)
+    {
+        eat(GsTokenType.OpeningDoubleCurlyBracket); // {{
+        while(running)
+        {
+            if (currentToken.type == GsTokenType.ClosingDoubleCurlyBracket)
+                break;
+            auto statement = parseStatement();
+            if (statement)
+            {
+                statement.programScope = program.peekScope();
+                block.children ~= statement;
+            }
+        }
+        eat(GsTokenType.ClosingDoubleCurlyBracket); // }}
     }
     
     void parseImplicitBlock(ASTBlock block)
@@ -1620,7 +1696,7 @@ class GsParser
             else
             {
                 stop("Unexpected token \"" ~ currentToken.value ~ "\" in key-value expression");
-                return null;
+                return undefinedNode;
             }
             ASTNode valueExpr = parseExpression();
             node.children ~= valueExpr;
@@ -1629,7 +1705,7 @@ class GsParser
         else
         {
             stop("Unexpected token \"" ~ currentToken.value ~ "\" in key-value expression");
-            return null;
+            return undefinedNode;
         }
     }
 }

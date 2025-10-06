@@ -634,7 +634,6 @@ If possible, macro is evaluated at compile-time taking other macros into account
 ```
 macro PI = 3.14159;
 macro PI2 = PI * 2;
-
 print PI2;
 ```
 

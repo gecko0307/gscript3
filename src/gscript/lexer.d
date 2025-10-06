@@ -58,10 +58,11 @@ enum GsTokenType
     OpeningBracket,
     OpeningSquareBracket,
     OpeningCurlyBracket,
+    OpeningDoubleCurlyBracket,
     ClosingBracket,
     ClosingSquareBracket,
     ClosingCurlyBracket,
-    //Separator,
+    ClosingDoubleCurlyBracket,
     Semicolon,
     Keyword,
     EOF
@@ -80,10 +81,11 @@ string tokenTypeToString(GsTokenType t)
         case GsTokenType.OpeningBracket: return "opening bracket";
         case GsTokenType.OpeningSquareBracket: return "opening square bracket";
         case GsTokenType.OpeningCurlyBracket: return "opening curly bracket";
+        case GsTokenType.OpeningDoubleCurlyBracket: return "opening double curly bracket";
         case GsTokenType.ClosingBracket: return "closing bracket";
         case GsTokenType.ClosingSquareBracket: return "closing square bracket";
         case GsTokenType.ClosingCurlyBracket: return "closing curly bracket";
-        //case GsTokenType.Separator: return "separator";
+        case GsTokenType.ClosingDoubleCurlyBracket: return "closing double curly bracket";
         case GsTokenType.Semicolon: return "semicolon";
         case GsTokenType.Keyword: return "keyword";
         case GsTokenType.EOF: return "end of file";
@@ -108,7 +110,7 @@ class GsLexer
     UTF8Encoder encoder;
     
     string[] delimiters = [
-        "(", ")", "{", "}", "[", "]", 
+        "(", ")", "{", "}", "[", "]", "{{", "}}",
         ".", ",", ":", ";",
         "+", "-", "*", "/",
         "=", ">", "<",
@@ -130,9 +132,7 @@ class GsLexer
         "let", "const", "null", "nan", "inf", "new", "array", "error", "func", "return",
         "if", "else", "while", "for", "do", "break", "continue",
         "spawn", "await", "sync", "yield", "shared", "escape", "raise",
-        "import", "from",
-        "print",
-        "type", "macro"
+        "import", "from", "print", "type", "macro"
     ];
     
     string[] operators = [
@@ -209,12 +209,14 @@ class GsLexer
         {
             return GsToken(GsTokenType.ClosingCurlyBracket, lexeme);
         }
-        /*
-        else if (separators.canFind(lexeme))
+        else if (lexeme == "{{")
         {
-            return GsToken(GsTokenType.Separator, lexeme);
+            return GsToken(GsTokenType.OpeningDoubleCurlyBracket, lexeme);
         }
-        */
+        else if (lexeme == "}}")
+        {
+            return GsToken(GsTokenType.ClosingDoubleCurlyBracket, lexeme);
+        }
         else if (lexeme == "true" || lexeme == "false")
         {
             return GsToken(GsTokenType.Boolean, lexeme);
