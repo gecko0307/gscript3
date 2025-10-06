@@ -598,9 +598,9 @@ const thread2 = spawn func
 };
 ```
 
-## Macro Substitution
+## AST Macros
 
-Macro is an expression alias:
+Macro is an abstract expression alias:
 
 ```
 macro test = (x < 10);
@@ -651,13 +651,13 @@ fun(100);
 fun(200);
 ```
 
-There is limited support for macro specialization parametrs, which makes them idiomatically close to templates in D. Unlike templates, macro specialization replaces named parameters with AST expressions rather than data types:
+There is limited support for parameterized macro expansion, which makes macros idiomatically close to templates in D. Unlike template specialization, macro expansion substitutes named parameters with AST expressions rather than data types:
 
 ```
 macro sum(a, b) = a + b;
 ```
 
-The above macro can specialize into a literal:
+The above macro can expand into a literal:
 
 ```
 print sum{3, 4}; // print 7
@@ -670,6 +670,6 @@ const x = 10;
 print sum{x, 4}; // print x + 4
 ```
 
-Function macros don't support specialization parameters.
+Function macros don't support parameterized expansion.
 
-Unlike global variables and functions, macros are defined in module's local context.
+In contrast to global variables and functions, macros are defined in module's local context and cannot be imported.
