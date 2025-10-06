@@ -600,7 +600,7 @@ const thread2 = spawn func
 
 ## AST Macros
 
-Macro is an abstract expression alias:
+Unstable experimental feature. Macro is a symbolic name for an abstract expression. It is inserted (expanded) to the AST at the point where it is referenced:
 
 ```
 macro test = (x < 10);
