@@ -135,7 +135,14 @@ class GsCodeGenerator
         {
             for(size_t i = 0; i < node.children.length; i++)
             {
-                node.children[i] = specialize(node.children[i], params, arguments);
+                auto specializedMacro = specialize(node.children[i], params, arguments);
+                GsDynamic eval = evaluate(specializedMacro);
+                if (eval.type == GsDynamicType.Number)
+                    node.children[i] = new ASTNode(NodeType.NumberLiteral, eval.asNumber.to!string);
+                else if (eval.type == GsDynamicType.String)
+                    node.children[i] = new ASTNode(NodeType.StringLiteral, "\"" ~ eval.asString ~ "\"");
+                else
+                    node.children[i] = specializedMacro;
             }
         }
         
