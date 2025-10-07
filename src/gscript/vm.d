@@ -169,11 +169,7 @@ class GsLibrary: Owner, GsObject
     {
         auto v = key in jumpTable;
         if (v)
-        {
-            auto fun = GsDynamic(*v);
-            fun.owner = this;
-            return fun;
-        }
+            return GsDynamic(*v);
         else
             return GsDynamic();
     }
