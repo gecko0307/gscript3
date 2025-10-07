@@ -130,13 +130,75 @@ struct GsCallFrame
     GsDynamic[128] parameters;
     GsDynamic[128] localVariables;
     size_t numParameters;
+    size_t returnAddress;
+    GsLibrary returnLibrary;
+}
+
+class GsLibrary: Owner, GsObject
+{
+    GsInstruction[] instructions;     // Program code
+    Dict!(size_t, string) jumpTable;  // Function table mapping names to instruction indices
+    
+    this(Owner owner = null)
+    {
+        super(owner);
+        
+        jumpTable = dict!(size_t, string);
+    }
+    
+    ~this()
+    {
+        Delete(jumpTable);
+    }
+    
+    void load(GsInstruction[] instructions)
+    {
+        this.instructions = instructions;
+        
+        // Populate the function table with label indices
+        foreach(i, instrunction; instructions)
+        {
+            if (instrunction.type == GsInstructionType.LABEL)
+            {
+                jumpTable[instrunction.operand.asString] = i;
+            }
+        }
+    }
+    
+    GsDynamic get(string key)
+    {
+        auto v = key in jumpTable;
+        if (v)
+        {
+            auto fun = GsDynamic(*v);
+            fun.owner = this;
+            return fun;
+        }
+        else
+            return GsDynamic();
+    }
+    
+    void set(string key, GsDynamic value)
+    {
+        // No-op
+    }
+    
+    bool contains(string key)
+    {
+        return (key in jumpTable) !is null;
+    }
+    
+    void setPrototype(GsObject proto)
+    {
+        // No-op
+    }
 }
 
 class GsVirtualMachine: Owner, GsObject
 {
-    GsInstruction[] instructions;     // Program code
     Dict!(GsDynamic, string) globals; // Built-in variables
-    Dict!(size_t, string) jumpTable;  // Function table mapping names to instruction indices
+    
+    GsLibrary mainLibrary;
     
     // Standard library
     GsGlobalBuiltins globBuiltins;
@@ -160,7 +222,7 @@ class GsVirtualMachine: Owner, GsObject
         super(owner);
         heap = New!GsArena(1024 * 10, this);
         
-        jumpTable = dict!(size_t, string);
+        mainLibrary = New!GsLibrary(this);
         
         globals = dict!(GsDynamic, string);
         
@@ -180,6 +242,7 @@ class GsVirtualMachine: Owner, GsObject
         
         mainThread = New!GsThread(this);
         mainThread.setPayload(this);
+        mainThread.library = mainLibrary;
         threads.append(mainThread);
         
         foreach (i; 0..31)
@@ -191,7 +254,6 @@ class GsVirtualMachine: Owner, GsObject
     
     ~this()
     {
-        Delete(jumpTable);
         Delete(globals);
         threads.free();
     }
@@ -265,15 +327,10 @@ class GsVirtualMachine: Owner, GsObject
         return GsDynamic(ch);
     }
     
-    bool hasLabel(string name)
-    {
-        return (name in jumpTable) != null;
-    }
-    
     // Spawn a new thread
     GsDynamic spawn(string jumpLabel, GsDynamic[] args)
     {
-        if (jumpLabel in jumpTable)
+        if (jumpLabel in mainLibrary.jumpTable)
         {
             GsObject payload = this;
             GsThread newThread;
@@ -293,6 +350,7 @@ class GsVirtualMachine: Owner, GsObject
             {
                 // No free thread, create a new one
                 newThread = New!GsThread(this);
+                newThread.library = mainLibrary;
                 threads.append(newThread);
             }
             
@@ -315,7 +373,7 @@ class GsVirtualMachine: Owner, GsObject
             callFrame.numParameters = args.length;
             newThread.callDepth = 0;
             
-            newThread.start(jumpTable[jumpLabel], 0);
+            newThread.start(mainLibrary.jumpTable[jumpLabel], 0);
             schedule();
             
             return newThread.yieldValue;
@@ -329,9 +387,12 @@ class GsVirtualMachine: Owner, GsObject
     
     void callInThread(GsThread tr, string jumpLabel, size_t numParams)
     {
-        if (jumpLabel in jumpTable)
+        if (jumpLabel in tr.library.jumpTable)
         {
-            tr.callStack[tr.cp] = tr.ip; // Push the current instruction pointer onto the call stack
+            // Save the current instruction pointer and library
+            tr.callFrame.returnAddress = tr.ip;
+            tr.callFrame.returnLibrary = tr.library;
+            
             // Push a new call frame
             tr.cp++;
             tr.callFrame = &tr.callFrames[tr.cp];
@@ -341,7 +402,7 @@ class GsVirtualMachine: Owner, GsObject
             }
             
             tr.callFrame.numParameters = numParams;
-            tr.ip = jumpTable[jumpLabel];
+            tr.ip = tr.library.jumpTable[jumpLabel];
             tr.callDepth++;
         }
         else
@@ -362,16 +423,7 @@ class GsVirtualMachine: Owner, GsObject
 
     void load(GsInstruction[] instructions)
     {
-        this.instructions = instructions;
-        
-        // Populate the function table with label indices
-        foreach(i, instrunction; instructions)
-        {
-            if (instrunction.type == GsInstructionType.LABEL)
-            {
-                jumpTable[instrunction.operand.asString] = i;
-            }
-        }
+        mainLibrary.load(instructions);
     }
     
     void run(size_t initialIp = 0, size_t initialCallDepth = 1)
@@ -443,13 +495,13 @@ class GsVirtualMachine: Owner, GsObject
                 
                 tr.callFrame = &tr.callFrames[tr.cp];
                 
-                if (tr.ip >= instructions.length)
+                if (tr.ip >= tr.library.instructions.length)
                 {
                     tr.status = GsThreadStatus.Stopped;
                     continue;
                 }
                 
-                auto instruction = instructions[tr.ip];
+                auto instruction = tr.library.instructions[tr.ip];
                 
                 tr.ip++;
                 
@@ -731,7 +783,7 @@ class GsVirtualMachine: Owner, GsObject
                         auto val = tr.pop();
                         if (val.type == GsDynamicType.String)
                         {
-                            if (val.asString in jumpTable)
+                            if (val.asString in tr.library.jumpTable)
                                 tr.push(GsDynamic(1.0));
                             else
                                 tr.push(GsDynamic(cast(double)(val.type)));
@@ -749,7 +801,7 @@ class GsVirtualMachine: Owner, GsObject
                             bool result = false;
                             if (a.type == GsDynamicType.String)
                             {
-                                result = (a.asString in jumpTable) !is null;
+                                result = (a.asString in tr.library.jumpTable) !is null;
                             }
                             tr.push(GsDynamic(cast(double)result));
                         }
@@ -759,32 +811,32 @@ class GsVirtualMachine: Owner, GsObject
                         }
                         break;
                     case GsInstructionType.JMP:
-                        tr.ip = jumpTable[instruction.operand.asString];
+                        tr.ip = tr.library.jumpTable[instruction.operand.asString];
                         break;
                     case GsInstructionType.JMP_IF:
                         if (cast(bool)tr.peek().asNumber)
                         {
-                            tr.ip = jumpTable[instruction.operand.asString];
+                            tr.ip = tr.library.jumpTable[instruction.operand.asString];
                         }
                         break;
                     case GsInstructionType.JMP_IF_NOT:
                         if (!cast(bool)tr.peek().asNumber)
                         {
-                            tr.ip = jumpTable[instruction.operand.asString];
+                            tr.ip = tr.library.jumpTable[instruction.operand.asString];
                         }
                         break;
                     case GsInstructionType.JMPPOP_IF:
                         if (cast(bool)tr.peek().asNumber)
                         {
                             tr.pop();
-                            tr.ip = jumpTable[instruction.operand.asString];
+                            tr.ip = tr.library.jumpTable[instruction.operand.asString];
                         }
                         break;
                     case GsInstructionType.JMPPOP_IF_NOT:
                         if (!cast(bool)tr.peek().asNumber)
                         {
                             tr.pop();
-                            tr.ip = jumpTable[instruction.operand.asString];
+                            tr.ip = tr.library.jumpTable[instruction.operand.asString];
                         }
                         break;
                     case GsInstructionType.INDEX_GET:
@@ -987,9 +1039,12 @@ class GsVirtualMachine: Owner, GsObject
                             if (func.type == GsDynamicType.String)
                             {
                                 string funcName = func.asString;
-                                if (funcName in jumpTable)
+                                if (funcName in tr.library.jumpTable)
                                 {
-                                    tr.callStack[tr.cp] = tr.ip; // Push the current instruction pointer onto the call stack
+                                    // Save the current instruction pointer and the library
+                                    tr.callFrame.returnAddress = tr.ip;
+                                    tr.callFrame.returnLibrary = tr.library;
+                                    
                                     // Push a new call frame
                                     tr.cp++;
                                     tr.callFrame = &tr.callFrames[tr.cp];
@@ -1026,7 +1081,7 @@ class GsVirtualMachine: Owner, GsObject
                                     tr.callFrame.numParameters = numParams;
                                     tr.callFrame.name = funcName;
                                     
-                                    tr.ip = jumpTable[funcName]; // Jump to the function's starting instruction
+                                    tr.ip = tr.library.jumpTable[funcName]; // Jump to the function's starting instruction
                                     
                                     tr.callDepth++;
                                     
@@ -1094,8 +1149,10 @@ class GsVirtualMachine: Owner, GsObject
                         if (tr.callDepth > 0)
                         {
                             tr.cp--;
-                            tr.ip = tr.callStack[tr.cp]; // Pop the return address from the call stack
                             tr.callFrame = &tr.callFrames[tr.cp];
+                            // Pop the return library and address from the call stack
+                            tr.library = tr.callFrame.returnLibrary;
+                            tr.ip = tr.callFrame.returnAddress;
                             tr.callDepth--;
                         }
                         else
@@ -1110,8 +1167,10 @@ class GsVirtualMachine: Owner, GsObject
                         {
                             // Same as return
                             tr.cp--;
-                            tr.ip = tr.callStack[tr.cp]; // Pop the return address from the call stack
                             tr.callFrame = &tr.callFrames[tr.cp];
+                            // Pop the return library and address from the call stack
+                            tr.library = tr.callFrame.returnLibrary;
+                            tr.ip = tr.callFrame.returnAddress;
                             tr.callDepth--;
                         }
                         else
@@ -1317,7 +1376,7 @@ class GsVirtualMachine: Owner, GsObject
                         if (func.type == GsDynamicType.String)
                         {
                             string jumpLabel = func.asString;
-                            if (jumpLabel in jumpTable)
+                            if (jumpLabel in tr.library.jumpTable)
                             {
                                 auto payloadParam = tr.pop();
                                 GsObject payload = null;
@@ -1348,6 +1407,7 @@ class GsVirtualMachine: Owner, GsObject
                                 {
                                     // No free thread, create a new one
                                     newThread = New!GsThread(this);
+                                    newThread.library = tr.library;
                                     threads.append(newThread);
                                 }
                                 
@@ -1377,7 +1437,7 @@ class GsVirtualMachine: Owner, GsObject
                                 cf.numParameters = numParams + 1;
                                 cf.name = jumpLabel;
                                 
-                                newThread.start(jumpTable[jumpLabel], 0);
+                                newThread.start(newThread.library.jumpTable[jumpLabel], 0);
                                 numActiveThreads++;
                                 
                                 tr.push(GsDynamic(newThread));
@@ -1514,15 +1574,15 @@ class GsThread: Owner, GsObject
 {
     GsVirtualMachine vm;
     GsObject payload;
-    GsDynamic[] stack;
-    size_t[] callStack;            // Call stack for subroutine return addresses
-    GsCallFrame[] callFrames;      // Stack of call frames
+    GsDynamic[] stack;             // Expression stack
+    GsCallFrame[] callFrames;      // Call stack
     size_t ip;                     // Instruction pointer
     size_t sp;                     // Stack pointer
     size_t cp;                     // Call stack pointer
     size_t callDepth = 1;
     
     GsArena heap;
+    GsLibrary library;             // Current library
     GsCallFrame* callFrame;        // Current call frame
     
     GsThreadStatus status;
@@ -1540,7 +1600,6 @@ class GsThread: Owner, GsObject
         heap = New!GsArena(1024, this);
         
         stack = New!(GsDynamic[])(256);
-        callStack = New!(size_t[])(256);
         callFrames = New!(GsCallFrame[])(256);
         callFrame = &callFrames[0];
         
@@ -1556,7 +1615,6 @@ class GsThread: Owner, GsObject
     ~this()
     {
         Delete(stack);
-        Delete(callStack);
         Delete(callFrames);
     }
     
