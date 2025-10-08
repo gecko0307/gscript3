@@ -48,6 +48,11 @@ enum GsDynamicType: uint
 alias GsNativeMethod = GsDynamic delegate(GsDynamic[]);
 alias GsNativeFunc = GsDynamic function(GsDynamic[]);
 
+enum GsSemanticsHint: uint
+{
+    LibraryFunctionBit = 1 << 0
+}
+
 struct GsDynamic
 {
     union
@@ -61,9 +66,8 @@ struct GsDynamic
     }
     
     GsObject owner;
-    
     GsDynamicType type;
-    uint payload;
+    uint hintBits;
     
     this(T)(T value)
     {

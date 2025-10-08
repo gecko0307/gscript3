@@ -132,7 +132,7 @@ class GsLexer
         "let", "const", "null", "nan", "inf", "new", "array", "error", "func", "return",
         "if", "else", "while", "for", "do", "break", "continue",
         "spawn", "await", "sync", "yield", "shared", "escape", "raise",
-        "import", "from", "print", "type", "macro"
+        "import", "from", "link", "as", "print", "type", "macro"
     ];
     
     string[] operators = [

@@ -891,6 +891,11 @@ class GsCodeGenerator
                 }
                 break;
             
+            case NodeType.GroupStatement:
+                foreach(child; node.children)
+                    instructions ~= generate(child);
+                break;
+            
             case NodeType.MacroBlockExpression:
                 auto macroBlockExpr = cast(ASTMacroBlockExpression)node;
                 instructions ~= generate(macroBlockExpr.bodyBlock);

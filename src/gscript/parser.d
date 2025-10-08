@@ -67,6 +67,7 @@ enum NodeType
     ContinueStatement,
     MacroDefineStatement,
     NoopStatement,
+    GroupStatement,
     Block,
     FunctionCallExpression,
     IndexAccessExpression,
@@ -1521,7 +1522,87 @@ class GsParser
             }
             else
             {
-                stop("Nested free functions are not allowed");
+                stop("Unexpected \"" ~ currentToken.value ~"\" in import statement, identifier expected");
+                return undefinedNode;
+            }
+        }
+        else if (currentToken.value == "link")
+        {
+            eat(GsTokenType.Keyword); // link
+            if (currentToken.type == GsTokenType.String)
+            {
+                string linkFilename = currentToken.value;
+                
+                if (linkFilename.length <= 2)
+                {
+                    stop("Illegal link: " ~ linkFilename);
+                    return undefinedNode;
+                }
+                
+                eat(GsTokenType.String); // filename
+                
+                if (currentToken.value != "as")
+                {
+                    stop("\"as\" expected, not \"" ~ currentToken.value ~ "\"");
+                    return undefinedNode;
+                }
+                eat(GsTokenType.Keyword); // as
+                
+                string linkName = currentToken.value;
+                
+                eat(GsTokenType.Identifier); // linkName
+                eat(GsTokenType.Semicolon); // ";"
+                
+                // ConstStatement <linkName>
+                //   AssignExpression =
+                //   MemberCallExpression load
+                //     MemberPropertyAccessExpression lib
+                //       Identifier global
+                //     StringLiteral <linkFilename>
+                
+                ASTNode globalExpr = new ASTNode(NodeType.Identifier, "global");
+                globalExpr.programScope = program.peekScope();
+                
+                ASTNode linkIdentifier = new ASTNode(NodeType.Identifier, linkName);
+                linkIdentifier.programScope = program.peekScope();
+                
+                ASTNode libAccessExpr = new ASTNode(NodeType.MemberPropertyAccessExpression, "lib", [globalExpr]);
+                libAccessExpr.programScope = program.peekScope();
+                
+                ASTNode filenameParam = new ASTNode(NodeType.StringLiteral, linkFilename);
+                ASTNode loadCallExpr = new ASTNode(NodeType.MemberCallExpression, "load", [libAccessExpr, filenameParam]);
+                loadCallExpr.programScope = program.peekScope();
+                
+                ASTNode linkAssignmentExpr = new ASTNode(NodeType.AssignExpression, "=", [linkIdentifier, loadCallExpr]);
+                
+                ASTNode linkStat = new ASTNode(NodeType.ConstStatement, linkName, [linkAssignmentExpr]);
+                linkStat.programScope = program.peekScope();
+                
+                // ExpressionStatement
+                //   SyncExpression
+                //     MemberCallExpression run
+                //       MemberPropertyAccessExpression lib
+                //         Identifier global
+                //       Identifier <linkName>
+                
+                ASTNode linkNameParam = new ASTNode(NodeType.Identifier, linkName);
+                ASTNode runCallExpr = new ASTNode(NodeType.MemberCallExpression, "run", [libAccessExpr, linkNameParam]);
+                runCallExpr.programScope = program.peekScope();
+                
+                auto syncExpr = new ASTNode(NodeType.SyncExpression, "", [runCallExpr]);
+                syncExpr.programScope = program.peekScope();
+                
+                auto syncStat = new ASTNode(NodeType.ExpressionStatement, "", [syncExpr]);
+                syncStat.programScope = program.peekScope();
+                
+                ASTNode linkGroupStat = new ASTNode(NodeType.GroupStatement, "", [linkStat, syncStat]);
+                linkGroupStat.programScope = program.peekScope();
+                
+                return linkGroupStat;
+            }
+            else
+            {
+                stop("Unexpected \"" ~ currentToken.value ~"\" in link statement, string expected");
                 return undefinedNode;
             }
         }

@@ -43,6 +43,7 @@ import gscript.arena;
 import gscript.instructions;
 import gscript.dynamic;
 import gscript.stdlib.builtins;
+import gscript.stdlib.lib;
 import gscript.stdlib.str;
 import gscript.stdlib.io;
 import gscript.stdlib.time;
@@ -126,7 +127,7 @@ class GsArenaObject: GsObject
 
 struct GsCallFrame
 {
-    string name = "<global>";
+    string name;
     GsDynamic[128] parameters;
     GsDynamic[128] localVariables;
     size_t numParameters;
@@ -136,14 +137,15 @@ struct GsCallFrame
 
 class GsLibrary: Owner, GsObject
 {
+    string name;
     GsInstruction[] instructions;     // Program code
     Dict!(size_t, string) jumpTable;  // Function table mapping names to instruction indices
     GsDynamic[128] rootVariables;     // Global (root-scope) variables
     
-    this(Owner owner = null)
+    this(string name, Owner owner = null)
     {
         super(owner);
-        
+        this.name = name;
         jumpTable = dict!(size_t, string);
     }
     
@@ -170,7 +172,11 @@ class GsLibrary: Owner, GsObject
     {
         auto v = key in jumpTable;
         if (v)
-            return GsDynamic(*v);
+        {
+            GsDynamic fun = GsDynamic(key);
+            fun.hintBits |= GsSemanticsHint.LibraryFunctionBit;
+            return fun;
+        }
         else
             return GsDynamic();
     }
@@ -198,6 +204,7 @@ class GsVirtualMachine: Owner, GsObject
     GsLibrary mainLibrary;
     
     // Standard library
+    GsGlobalLibrarian globLibrarian;
     GsGlobalBuiltins globBuiltins;
     GsGlobalStr globStr;
     GsGlobalIO globIO;
@@ -219,12 +226,15 @@ class GsVirtualMachine: Owner, GsObject
         super(owner);
         heap = New!GsArena(1024 * 10, this);
         
-        mainLibrary = New!GsLibrary(this);
+        mainLibrary = New!GsLibrary("main", this);
         
         globals = dict!(GsDynamic, string);
         
         globBuiltins = heap.create!GsGlobalBuiltins(heap);
         globals["builtins"] = GsDynamic(globBuiltins);
+        
+        globLibrarian = heap.create!GsGlobalLibrarian(this);
+        globals["lib"] = GsDynamic(globLibrarian);
         
         globStr = heap.create!GsGlobalStr(heap);
         globals["string"] = GsDynamic(globStr);
@@ -240,6 +250,7 @@ class GsVirtualMachine: Owner, GsObject
         mainThread = New!GsThread(this);
         mainThread.setPayload(this);
         mainThread.library = mainLibrary;
+        mainThread.callFrame.name = mainLibrary.name;
         threads.append(mainThread);
         
         foreach (i; 0..31)
@@ -324,7 +335,52 @@ class GsVirtualMachine: Owner, GsObject
         return GsDynamic(ch);
     }
     
+    // Spawn a new thread that initializes the library
+    GsDynamic spawn(GsLibrary lib)
+    {
+        GsObject payload = this;
+        GsThread newThread;
+        
+        // Look for a free thread
+        for (size_t ti = 0; ti < threads.length; ti++)
+        {
+            auto t = threads.data[ti];
+            if (t.status == GsThreadStatus.Free)
+            {
+                newThread = t;
+                break;
+            }
+        }
+        
+        if (newThread is null)
+        {
+            // No free thread, create a new one
+            newThread = New!GsThread(this);
+            newThread.library = mainLibrary;
+            threads.append(newThread);
+        }
+        
+        newThread.library = lib;
+        mainThread.callFrame.name = lib.name;
+        newThread.setPayload(payload);
+        
+        // Add to linked list
+        newThread.prev = mainThread;
+        if (mainThread.next)
+        {
+            mainThread.next.prev = newThread;
+            newThread.next = mainThread.next;
+        }
+        mainThread.next = newThread;
+        
+        newThread.callDepth = 1;
+        newThread.start(0, 1);
+        
+        return GsDynamic(newThread);
+    }
+    
     // Spawn a new thread
+    /*
     GsDynamic spawn(string jumpLabel, GsDynamic[] args)
     {
         if (jumpLabel in mainLibrary.jumpTable)
@@ -381,6 +437,7 @@ class GsVirtualMachine: Owner, GsObject
             return GsDynamic();
         }
     }
+    */
     
     void callInThread(GsThread tr, string jumpLabel, size_t numParams)
     {
@@ -416,6 +473,63 @@ class GsVirtualMachine: Owner, GsObject
         }
         
         running = false;
+    }
+    
+    bool internalCall(GsLibrary lib, GsThread tr, string label, GsObject funcOwner, size_t numParams)
+    {
+        if (label in lib.jumpTable)
+        {
+            // Save the current instruction pointer and the library
+            tr.callFrame.returnAddress = tr.ip;
+            tr.callFrame.returnLibrary = tr.library;
+            
+            // Push a new call frame
+            tr.cp++;
+            tr.callFrame = &tr.callFrames[tr.cp];
+            for(size_t pi = 0; pi < tr.callFrame.parameters.length; pi++)
+            {
+                if (pi < numParams)
+                {
+                    GsDynamic value = tr.pop();
+                    
+                    bool allow = true;
+                    if (value.type == GsDynamicType.Object ||
+                        value.type == GsDynamicType.String ||
+                        value.type == GsDynamicType.Array)
+                    {
+                        allow = 
+                            tr is mainThread || 
+                            value.owner is null || 
+                            value.owner is mainThread ||
+                            funcOwner is tr;
+                    }
+                    
+                    if (allow)
+                        tr.callFrame.parameters[numParams - 1 - pi] = value;
+                    else
+                    {
+                        fatality("Escaping thread-local reference (use \"escape\" if intended)");
+                        return false;
+                    }
+                }
+                else
+                    tr.callFrame.parameters[pi] = GsDynamic();
+            }
+            tr.callFrame.numParameters = numParams;
+            tr.callFrame.name = label;
+            
+            tr.ip = lib.jumpTable[label]; // Jump to the function's starting instruction
+            tr.library = lib;
+            
+            tr.callDepth++;
+        }
+        else
+        {
+            fatality("Undefined jump label \"%s\"", label);
+            return false;
+        }
+        
+        return true;
     }
 
     void load(GsInstruction[] instructions)
@@ -1036,59 +1150,27 @@ class GsVirtualMachine: Owner, GsObject
                             if (func.type == GsDynamicType.String)
                             {
                                 string funcName = func.asString;
-                                if (funcName in tr.library.jumpTable)
+                                
+                                if (numParams > 0 && func.hintBits & GsSemanticsHint.LibraryFunctionBit)
                                 {
-                                    // Save the current instruction pointer and the library
-                                    tr.callFrame.returnAddress = tr.ip;
-                                    tr.callFrame.returnLibrary = tr.library;
-                                    
-                                    // Push a new call frame
-                                    tr.cp++;
-                                    tr.callFrame = &tr.callFrames[tr.cp];
-                                    for(size_t pi = 0; pi < tr.callFrame.parameters.length; pi++)
+                                    auto firstArgument = tr.peek(numParams - 1);
+                                    if (firstArgument.type == GsDynamicType.Object)
                                     {
-                                        if (pi < numParams)
+                                        GsLibrary lib = cast(GsLibrary)firstArgument.asObject;
+                                        if (lib)
                                         {
-                                            GsDynamic value = tr.pop();
-                                            
-                                            bool allow = true;
-                                            if (value.type == GsDynamicType.Object ||
-                                                value.type == GsDynamicType.String ||
-                                                value.type == GsDynamicType.Array)
-                                            {
-                                                allow = 
-                                                    tr is mainThread || 
-                                                    value.owner is null || 
-                                                    value.owner is mainThread ||
-                                                    func.owner is tr;
-                                            }
-                                            
-                                            if (allow)
-                                                tr.callFrame.parameters[numParams - 1 - pi] = value;
-                                            else
-                                            {
-                                                fatality("Escaping thread-local reference (use \"escape\" if intended)");
-                                                //return;
+                                            internalCall(lib, tr, funcName, func.owner, numParams);
                                                 break;
-                                            }
                                         }
                                         else
-                                            tr.callFrame.parameters[pi] = GsDynamic();
+                                        {
+                                            fatality("Attempting to call function \"%s\" with a non-library object");
+                                        }
                                     }
-                                    tr.callFrame.numParameters = numParams;
-                                    tr.callFrame.name = funcName;
-                                    
-                                    tr.ip = tr.library.jumpTable[funcName]; // Jump to the function's starting instruction
-                                    
-                                    tr.callDepth++;
-                                    
-                                    break;
                                 }
-                                else
-                                {
-                                    fatality("Undefined jump label \"%s\"", funcName);
-                                    break;
-                                }
+                                
+                                internalCall(tr.library, tr, funcName, func.owner, numParams);
+                                break;
                             }
                             else
                             {
@@ -1675,6 +1757,17 @@ class GsThread: Owner, GsObject
         }
         else
             return stack[sp - 1];
+    }
+    
+    GsDynamic peek(size_t offset)
+    {
+        if (sp == 0)
+        {
+            vm.fatality("Stack is empty");
+            return GsDynamic();
+        }
+        else
+            return stack[sp - 1 - offset];
     }
 
     void push(GsDynamic value)
