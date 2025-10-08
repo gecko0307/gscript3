@@ -22,7 +22,7 @@ print "Hello, World!";
 * [x] Expose command line arguments
 * [x] Error handling
 * [x] Macros, compile-time evaluation
-* [ ] Bytecode modularity
+* [x] Bytecode modularity
 * [ ] Standard library
 
 ## Why GScript3?
