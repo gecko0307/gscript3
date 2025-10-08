@@ -679,7 +679,7 @@ func sqr(lib, x)
 `main.gs`
 
 ```
-link "testlib.gsc" as testlib;
+link "libtest.gsc" as libtest;
 
-print testlib.sqr(10);
+print libtest.sqr(10);
 ```
