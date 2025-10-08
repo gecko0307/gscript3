@@ -1467,18 +1467,8 @@ class GsParser
         else if (currentToken.value == "import")
         {
             eat(GsTokenType.Keyword); // import
-            if (currentToken.type == GsTokenType.Identifier)
+            if (currentToken.type == GsTokenType.String)
             {
-                string importName = currentToken.value;
-                eat(GsTokenType.Identifier); // import name
-                
-                if (currentToken.value != "from")
-                {
-                    stop("\"from\" expected, not \"" ~ currentToken.value ~ "\"");
-                    return undefinedNode;
-                }
-                eat(GsTokenType.Keyword); // from
-                
                 string importFilename = currentToken.value;
                 eat(GsTokenType.String); // filename
                 if (importFilename.length > 2)
@@ -1489,6 +1479,15 @@ class GsParser
                     return undefinedNode;
                 }
                 
+                if (currentToken.value != "as")
+                {
+                    stop("\"as\" expected, not \"" ~ currentToken.value ~ "\"");
+                    return undefinedNode;
+                }
+                eat(GsTokenType.Keyword); // as
+                
+                string importName = currentToken.value;
+                eat(GsTokenType.Identifier); // import name
                 eat(GsTokenType.Semicolon); // ";"
                 
                 // ConstStatement <importName>
@@ -1522,7 +1521,7 @@ class GsParser
             }
             else
             {
-                stop("Unexpected \"" ~ currentToken.value ~"\" in import statement, identifier expected");
+                stop("Unexpected \"" ~ currentToken.value ~"\" in import statement, string expected");
                 return undefinedNode;
             }
         }

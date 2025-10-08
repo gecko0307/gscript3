@@ -1,3 +1,3 @@
-import Foo from "foo.gs";
+import "foo.gs" as Foo;
 
 Foo.test();

@@ -250,7 +250,7 @@ Now you can import and use this module:
 
 main.gs:
 ```
-import Foo from "foo.gs";
+import "foo.gs" as Foo;
 
 Foo.test();
 ```
@@ -662,3 +662,24 @@ print sum{x, 4}; // print x + 4
 In contrast to global variables and functions, macros are defined in module's local context and cannot be imported.
 
 Function macros and statement macros are not supported at the moment.
+
+## Bytecode Libraries
+
+A precompiled *.gsc file can be linked at runtime. This allows calling functions from another bytecode module:
+
+`libtest.gs` (compiled to `libtest.gsc`):
+
+```
+func sqr(lib, x)
+{
+    return x * x;
+}
+```
+
+`main.gs`
+
+```
+link "testlib.gsc" as testlib;
+
+print testlib.sqr(10);
+```
