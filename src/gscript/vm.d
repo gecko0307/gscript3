@@ -138,6 +138,7 @@ class GsLibrary: Owner, GsObject
 {
     GsInstruction[] instructions;     // Program code
     Dict!(size_t, string) jumpTable;  // Function table mapping names to instruction indices
+    GsDynamic[128] rootVariables;     // Global (root-scope) variables
     
     this(Owner owner = null)
     {
@@ -1205,7 +1206,8 @@ class GsVirtualMachine: Owner, GsObject
                         {
                             if (value.owner is null || value.owner is mainThread)
                             {
-                                mainThread.callFrames[0].localVariables[vIndex] = value;
+                                // Store a value into a global variable
+                                tr.library.rootVariables[vIndex] = value;
                                 break;
                             }
                             else
@@ -1216,12 +1218,13 @@ class GsVirtualMachine: Owner, GsObject
                         }
                         else
                         {
-                            mainThread.callFrames[0].localVariables[vIndex] = value; // Store a value into a global variable
+                            // Store a value into a global variable
+                            tr.library.rootVariables[vIndex] = value;
                             break;
                         }
                     case GsInstructionType.GLOBAL_LOAD_VAR:
                         size_t vIndex = cast(size_t)instruction.operand.asNumber;
-                        tr.push(mainThread.callFrames[0].localVariables[vIndex]); // Load a global variable onto the stack
+                        tr.push(tr.library.rootVariables[vIndex]); // Load a global variable onto the stack
                         break;
                     case GsInstructionType.NEW:
                         uint region = cast(uint)instruction.operand.asNumber;
@@ -1577,7 +1580,7 @@ class GsThread: Owner, GsObject
     size_t cp;                     // Call stack pointer
     size_t callDepth = 1;
     
-    GsArena heap;
+    GsArena heap;                  // Isolated heap
     GsLibrary library;             // Current library
     GsCallFrame* callFrame;        // Current call frame
     

@@ -376,6 +376,11 @@ class GsCodeGenerator
                         }
                     }
                 }
+                else if (globalScope.isVariableVisible(name))
+                {
+                    int index = globalScope.variableIndex(name);
+                    instructions ~= GsInstruction(GsInstructionType.GLOBAL_LOAD_VAR, GsDynamic(cast(double)index));
+                }
                 else if (node.programScope.isVariableVisible(name))
                 {
                     int index = node.programScope.variableIndex(name);
@@ -385,11 +390,6 @@ class GsCodeGenerator
                 {
                     int index = node.programScope.argumentIndex(name);
                     instructions ~= GsInstruction(GsInstructionType.LOAD_ARG, GsDynamic(cast(double)index));
-                }
-                else if (globalScope.isVariableVisible(name))
-                {
-                    int index = globalScope.variableIndex(name);
-                    instructions ~= GsInstruction(GsInstructionType.GLOBAL_LOAD_VAR, GsDynamic(cast(double)index));
                 }
                 else
                 {
@@ -415,6 +415,16 @@ class GsCodeGenerator
                     instructions ~= generate(lhs.children[1]); // index
                     instructions ~= GsInstruction(GsInstructionType.INDEX_SET);
                 }
+                else if (globalScope.isVariableVisible(name))
+                {
+                    GsVariable v = globalScope.getVariable(name);
+                    if (v.isConst && v.isInitialized)
+                        throw new Exception("Assignment to constant variable \"" ~ name ~ "\"");
+                    
+                    v.isInitialized = true;
+                    int index = v.index;
+                    instructions ~= GsInstruction(GsInstructionType.GLOBAL_STORE_VAR, GsDynamic(cast(double)index));
+                }
                 else if (node.programScope.isVariableVisible(name))
                 {
                     GsVariable v = node.programScope.getVariable(name);
@@ -429,16 +439,6 @@ class GsCodeGenerator
                 {
                     int index = node.programScope.argumentIndex(name);
                     instructions ~= GsInstruction(GsInstructionType.STORE_ARG, GsDynamic(cast(double)index));
-                }
-                else if (globalScope.isVariableVisible(name))
-                {
-                    GsVariable v = globalScope.getVariable(name);
-                    if (v.isConst && v.isInitialized)
-                        throw new Exception("Assignment to constant variable \"" ~ name ~ "\"");
-                    
-                    v.isInitialized = true;
-                    int index = v.index;
-                    instructions ~= GsInstruction(GsInstructionType.GLOBAL_STORE_VAR, GsDynamic(cast(double)index));
                 }
                 else
                 {
@@ -545,7 +545,13 @@ class GsCodeGenerator
                     size_t numParameters = node.children.length;
                     foreach(child; node.children)
                         instructions ~= generate(child);
-                    if (node.programScope.isVariableVisible(funcName))
+                    if (globalScope.isVariableVisible(funcName))
+                    {
+                        // Call by global reference
+                        int index = globalScope.variableIndex(funcName);
+                        instructions ~= GsInstruction(GsInstructionType.GLOBAL_LOAD_VAR, GsDynamic(cast(double)index));
+                    }
+                    else if (node.programScope.isVariableVisible(funcName))
                     {
                         // Call by reference
                         int index = node.programScope.variableIndex(funcName);
@@ -556,12 +562,6 @@ class GsCodeGenerator
                         // Call by reference
                         int index = node.programScope.argumentIndex(funcName);
                         instructions ~= GsInstruction(GsInstructionType.LOAD_ARG, GsDynamic(cast(double)index));
-                    }
-                    else if (globalScope.isVariableVisible(funcName))
-                    {
-                        // Call by global reference
-                        int index = globalScope.variableIndex(funcName);
-                        instructions ~= GsInstruction(GsInstructionType.GLOBAL_LOAD_VAR, GsDynamic(cast(double)index));
                     }
                     else
                     {
@@ -633,16 +633,16 @@ class GsCodeGenerator
             
             case NodeType.LetStatement:
                 string varName = node.value;
-                //if (nameIsDefined(node.programScope, varName))
-                //    throw new Exception("Redefinition of \"" ~ varName ~ "\"");
+                if (globaNamelIsDefined(varName))
+                    throw new Exception("Redefinition of \"" ~ varName ~ "\"");
                 node.programScope.defineVariable(varName);
                 instructions ~= generate(node.children[0]);
                 break;
             
             case NodeType.ConstStatement:
                 string varName = node.value;
-                //if (nameIsDefined(node.programScope, varName))
-                //    throw new Exception("Redefinition of \"" ~ varName ~ "\"");
+                if (globaNamelIsDefined(varName))
+                    throw new Exception("Redefinition of \"" ~ varName ~ "\"");
                 node.programScope.defineVariable(varName, true);
                 instructions ~= generate(node.children[0]);
                 break;
@@ -1024,6 +1024,15 @@ class GsCodeGenerator
         }
     }
     
+    bool globaNamelIsDefined(string name)
+    {
+        return
+            name == "global" ||
+            name in constants ||
+            name in macros ||
+            globalScope.isVariableVisible(name);
+    }
+    
     bool nameIsDefined(Scope localScope, string name)
     {
         return
@@ -1070,7 +1079,8 @@ class GsCodeGenerator
                         {
                             globalScope.defineVariable(func.name, true);
                             output ~= GsInstruction(GsInstructionType.PUSH, GsDynamic(func.name));
-                            output ~= GsInstruction(GsInstructionType.STORE_VAR, GsDynamic(cast(double)numFunctions));
+                            output ~= GsInstruction(GsInstructionType.GLOBAL_STORE_VAR, GsDynamic(cast(double)numFunctions));
+                            output ~= GsInstruction(GsInstructionType.POP);
                             numFunctions++;
                         }
                     }

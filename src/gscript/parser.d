@@ -241,10 +241,11 @@ class Scope
         {
             if (!(name in arguments))
             {
+                //writefln("%s: defineVariable %s at depth=%s, ownerScope=%s", cast(void*)this, name, depth, cast(void*)ownerScope);
                 if (name in variables)
                 {
                     GsVariable v = variables[name];
-                    debug writeln(v.ownerScope !is this, " ", depth, " < ", v.depth);
+                    //debug writeln(v.ownerScope !is this, " ", depth, " < ", v.depth);
                     // Reuse variable if it was defined in deeper or neighbouring scope
                     if (v.ownerScope !is this && depth <= v.depth)
                     {
