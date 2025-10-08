@@ -12,11 +12,10 @@ func threadFunc(self, index)
 let i = 0;
 let bi = 0;
 let t;
-let batch = array(100);
+let batch = array(1000000);
 while(i < 1000000)
 {
     print i;
-    
     bi = 0;
     print "batch start";
     while(bi < 100)

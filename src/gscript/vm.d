@@ -1488,13 +1488,13 @@ class GsVirtualMachine: Owner, GsObject
                                 {
                                     // No free thread, create a new one
                                     newThread = New!GsThread(this);
-                                    newThread.library = tr.library;
                                     threads.append(newThread);
                                 }
                                 
                                 if (payload is null)
                                     payload = newThread.createObject();
                                 newThread.setPayload(payload);
+                                newThread.library = tr.library;
                                 
                                 // Add to linked list
                                 newThread.prev = tr;

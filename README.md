@@ -601,7 +601,7 @@ const thread2 = spawn func
 
 ## AST Macros
 
-Unstable experimental feature. Macro is a symbolic name for an abstract expression. It is inserted (expanded) to the AST at the point where it is referenced:
+**Unstable experimental feature**. Macro is a symbolic name for an abstract expression. It is inserted (expanded) to the AST at the point where it is referenced:
 
 ```
 macro test = (x < 10);
@@ -676,7 +676,7 @@ func sqr(lib, x)
 }
 ```
 
-`main.gs`
+`main.gs`:
 
 ```
 link "libtest.gsc" as libtest;

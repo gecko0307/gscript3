@@ -824,21 +824,28 @@ class GsCodeGenerator
             case NodeType.ForStatement:
                 string labelStartFor = getLabel();
                 string labelEndFor = getLabel();
+                
                 auto initialization = node.children[0];
                 auto condition = node.children[1];
-                auto loopBlock = cast(ASTBlock)node.children[2];
-                auto advancement = node.children[3];
+                auto advancement = node.children[2];
+                auto loopBlock = cast(ASTBlock)node.children[3];
+                
                 loopBlock.programScope.breakLabel = labelEndFor;
                 loopBlock.programScope.continueLabel = labelStartFor;
+                
                 instructions ~= generate(initialization); // initialization
+                
                 instructions ~= GsInstruction(GsInstructionType.LABEL, GsDynamic(labelStartFor));
                 instructions ~= generate(condition); // condition
                 instructions ~= GsInstruction(GsInstructionType.JMPPOP_IF_NOT, GsDynamic(labelEndFor));
                 instructions ~= GsInstruction(GsInstructionType.POP);
+                
                 instructions ~= generate(loopBlock); // loop
+                
                 instructions ~= generate(advancement); // advancement
                 instructions ~= GsInstruction(GsInstructionType.JMP, GsDynamic(labelStartFor));
                 instructions ~= GsInstruction(GsInstructionType.LABEL, GsDynamic(labelEndFor));
+
                 break;
             
             case NodeType.BreakStatement:
