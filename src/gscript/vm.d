@@ -379,8 +379,7 @@ class GsVirtualMachine: Owner, GsObject
         return GsDynamic(newThread);
     }
     
-    // Spawn a new thread
-    /*
+    // Spawn a new thread in the main library
     GsDynamic spawn(string jumpLabel, GsDynamic[] args)
     {
         if (jumpLabel in mainLibrary.jumpTable)
@@ -403,11 +402,11 @@ class GsVirtualMachine: Owner, GsObject
             {
                 // No free thread, create a new one
                 newThread = New!GsThread(this);
-                newThread.library = mainLibrary;
                 threads.append(newThread);
             }
             
             newThread.setPayload(payload);
+            newThread.library = mainLibrary;
             
             // Add to linked list
             newThread.prev = mainThread;
@@ -437,7 +436,6 @@ class GsVirtualMachine: Owner, GsObject
             return GsDynamic();
         }
     }
-    */
     
     void callInThread(GsThread tr, string jumpLabel, size_t numParams)
     {
