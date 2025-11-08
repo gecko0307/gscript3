@@ -29,6 +29,7 @@ module gscript.dynamic;
 
 import std.traits;
 import std.conv;
+import dlib.math.vector;
 
 import gscript.vm;
 
@@ -42,7 +43,8 @@ enum GsDynamicType: uint
     NativeMethod = 5,
     NativeFunction = 6,
     Error = 7,
-    Function = 8
+    Function = 8,
+    Vector = 9
 }
 
 alias GsNativeMethod = GsDynamic delegate(GsDynamic[]);
@@ -53,11 +55,114 @@ enum GsSemanticsHint: uint
     LibraryFunctionBit = 1 << 0
 }
 
+struct GsVector
+{
+    float x;
+    float y;
+    float z;
+    float w;
+    
+    this(double x, double y, double z, double w)
+    {
+        this.x = x;
+        this.y = y;
+        this.z = z;
+        this.w = w;
+    }
+    
+    this(double x, double y, double z)
+    {
+        this.x = x;
+        this.y = y;
+        this.z = z;
+        this.w = 0.0f;
+    }
+    
+    this(double x, double y)
+    {
+        this.x = x;
+        this.y = y;
+        this.z = 0.0f;
+        this.w = 0.0f;
+    }
+    
+    this(Vector4f v)
+    {
+        x = v.x;
+        y = v.y;
+        z = v.z;
+        w = v.w;
+    }
+    
+    this(Vector3f v)
+    {
+        x = v.x;
+        y = v.y;
+        z = v.z;
+        w = 0.0f;
+    }
+    
+    this(Vector2f v)
+    {
+        x = v.x;
+        y = v.y;
+        z = 0.0f;
+        w = 0.0f;
+    }
+    
+    this(float s)
+    {
+        x = s;
+        y = s;
+        z = s;
+        w = s;
+    }
+    
+    this(double s)
+    {
+        x = s;
+        y = s;
+        z = s;
+        w = s;
+    }
+    
+    GsVector opBinary(string op: "+")(GsVector v)
+    {
+        return GsVector(x + v.x, y + v.y, z + v.z, w + v.w);
+    }
+    
+    GsVector opBinary(string op: "-")(GsVector v)
+    {
+        return GsVector(x - v.x, y - v.y, z - v.z, w - v.w);
+    }
+    
+    GsVector opBinary(string op: "*")(GsVector v)
+    {
+        return GsVector(x * v.x, y * v.y, z * v.z, w * v.w);
+    }
+    
+    GsVector opBinary(string op: "/")(GsVector v)
+    {
+        return GsVector(x / v.x, y / v.y, z / v.z, w / v.w);
+    }
+    
+    GsVector opUnary(string op: "-")()
+    {
+        return GsVector(-x, -y, -z, -w);
+    }
+    
+    GsVector opUnary(string op: "+")()
+    {
+        return this;
+    }
+}
+
 struct GsDynamic
 {
     union
     {
         double asNumber;
+        GsVector asVector;
         GsObject asObject;
         GsNativeMethod asNativeMethod;
         GsNativeFunc asNativeFunction;
@@ -80,6 +185,11 @@ struct GsDynamic
         {
             asNumber = value;
             type = GsDynamicType.Number;
+        }
+        else static if (is(T == GsVector))
+        {
+            asVector = value;
+            type = GsDynamicType.Vector;
         }
         else static if (is(T : GsObject))
         {
@@ -119,6 +229,8 @@ struct GsDynamic
                 return "null";
             case GsDynamicType.Number:
                 return asNumber.to!string;
+            case GsDynamicType.Vector:
+                return asVector.to!string;
             case GsDynamicType.String:
                 return asString;
             case GsDynamicType.Array:

@@ -633,6 +633,8 @@ class GsVirtualMachine: Owner, GsObject
                         auto a = tr.pop();
                         if (a.type == GsDynamicType.Number && b.type == GsDynamicType.Number)
                             tr.push(GsDynamic(a.asNumber + b.asNumber));
+                        else if (a.type == GsDynamicType.Vector && b.type == GsDynamicType.Vector)
+                            tr.push(GsDynamic(a.asVector + b.asVector));
                         else
                         {
                             fatality("Addition of %s and %s", a.type, b.type);
@@ -643,6 +645,8 @@ class GsVirtualMachine: Owner, GsObject
                         auto a = tr.pop();
                         if (a.type == GsDynamicType.Number && b.type == GsDynamicType.Number)
                             tr.push(GsDynamic(a.asNumber - b.asNumber));
+                        else if (a.type == GsDynamicType.Vector && b.type == GsDynamicType.Vector)
+                            tr.push(GsDynamic(a.asVector - b.asVector));
                         else
                         {
                             fatality("Subtraction of %s and %s", a.type, b.type);
@@ -653,6 +657,8 @@ class GsVirtualMachine: Owner, GsObject
                         auto a = tr.pop();
                         if (a.type == GsDynamicType.Number && b.type == GsDynamicType.Number)
                             tr.push(GsDynamic(a.asNumber * b.asNumber));
+                        else if (a.type == GsDynamicType.Vector && b.type == GsDynamicType.Vector)
+                            tr.push(GsDynamic(a.asVector * b.asVector));
                         else
                         {
                             fatality("Multiplication of %s and %s", a.type, b.type);
@@ -663,6 +669,8 @@ class GsVirtualMachine: Owner, GsObject
                         auto a = tr.pop();
                         if (a.type == GsDynamicType.Number && b.type == GsDynamicType.Number)
                             tr.push(GsDynamic(a.asNumber / b.asNumber));
+                        else if (a.type == GsDynamicType.Vector && b.type == GsDynamicType.Vector)
+                            tr.push(GsDynamic(a.asVector / b.asVector));
                         else
                         {
                             fatality("Division of %s and %s", a.type, b.type);
@@ -672,6 +680,8 @@ class GsVirtualMachine: Owner, GsObject
                         auto a = tr.pop();
                         if (a.type == GsDynamicType.Number)
                             tr.push(GsDynamic(-a.asNumber));
+                        else if (a.type == GsDynamicType.Vector)
+                            tr.push(GsDynamic(-a.asVector));
                         else
                         {
                             fatality("Negation of %s", a.type);
@@ -1621,6 +1631,51 @@ class GsVirtualMachine: Owner, GsObject
                             tr.yieldValue = param;
                             tr.finalize();
                         }
+                        break;
+                    case GsInstructionType.VEC0:
+                        tr.push(GsDynamic(GsVector(0.0)));
+                        break;
+                    case GsInstructionType.VEC1:
+                        auto e1 = tr.pop();
+                        if (e1.type != GsDynamicType.Number)
+                            fatality("Cannot make a vector from %s", e1.type);
+                        tr.push(GsDynamic(GsVector(e1.asNumber)));
+                        break;
+                    case GsInstructionType.VEC2:
+                        auto e2 = tr.pop();
+                        auto e1 = tr.pop();
+                        if (e1.type != GsDynamicType.Number)
+                            fatality("Cannot make a vector from %s", e1.type);
+                        if (e2.type != GsDynamicType.Number)
+                            fatality("Cannot make a vector from %s", e2.type);
+                        tr.push(GsDynamic(GsVector(e1.asNumber, e2.asNumber)));
+                        break;
+                    case GsInstructionType.VEC3:
+                        auto e3 = tr.pop();
+                        auto e2 = tr.pop();
+                        auto e1 = tr.pop();
+                        if (e1.type != GsDynamicType.Number)
+                            fatality("Cannot make a vector from %s", e1.type);
+                        if (e2.type != GsDynamicType.Number)
+                            fatality("Cannot make a vector from %s", e2.type);
+                        if (e3.type != GsDynamicType.Number)
+                            fatality("Cannot make a vector from %s", e3.type);
+                        tr.push(GsDynamic(GsVector(e1.asNumber, e2.asNumber, e3.asNumber)));
+                        break;
+                    case GsInstructionType.VEC4:
+                        auto e4 = tr.pop();
+                        auto e3 = tr.pop();
+                        auto e2 = tr.pop();
+                        auto e1 = tr.pop();
+                        if (e1.type != GsDynamicType.Number)
+                            fatality("Cannot make a vector from %s", e1.type);
+                        if (e2.type != GsDynamicType.Number)
+                            fatality("Cannot make a vector from %s", e2.type);
+                        if (e3.type != GsDynamicType.Number)
+                            fatality("Cannot make a vector from %s", e3.type);
+                        if (e4.type != GsDynamicType.Number)
+                            fatality("Cannot make a vector from %s", e4.type);
+                        tr.push(GsDynamic(GsVector(e1.asNumber, e2.asNumber, e3.asNumber, e4.asNumber)));
                         break;
                     case GsInstructionType.HALT:
                         tr.finalize();

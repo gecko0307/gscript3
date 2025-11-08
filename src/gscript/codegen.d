@@ -314,6 +314,24 @@ class GsCodeGenerator
                 }
                 break;
             
+            case NodeType.VectorLiteral:
+                foreach(i, child; node.children)
+                {
+                    if (i < 4)
+                        instructions ~= generate(child);
+                }
+                if (node.children.length == 0)
+                    instructions ~= GsInstruction(GsInstructionType.VEC0);
+                else if (node.children.length == 1)
+                    instructions ~= GsInstruction(GsInstructionType.VEC1);
+                else if (node.children.length == 2)
+                    instructions ~= GsInstruction(GsInstructionType.VEC2);
+                else if (node.children.length == 3)
+                    instructions ~= GsInstruction(GsInstructionType.VEC3);
+                else if (node.children.length == 4)
+                    instructions ~= GsInstruction(GsInstructionType.VEC4);
+                break;
+            
             case NodeType.FunctionLiteral:
                 auto func = cast(ASTFunctionLiteral)node;
                 func.label = getLabel();

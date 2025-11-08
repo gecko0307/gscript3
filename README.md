@@ -23,6 +23,7 @@ print "Hello, World!";
 * [x] Error handling
 * [x] Macros, compile-time evaluation
 * [x] Bytecode modularity
+* [x] Vector type
 * [ ] Standard library
 
 ## Why GScript3?
@@ -36,6 +37,7 @@ Most popular scripting engines are too cumbersome for embedding in languages oth
 ## Main Changes from GScript2
 - `let` istead of `var`
 - `const` support
+- Vector type support
 - Global execution context (instead of mandatory `main` function)
 - Direct access to global variables, without `global`. `global` object is still there, for imports and externally defined properties
 - JS-like object literals istead of prototype functions; see below
@@ -54,7 +56,8 @@ Architecture improvements:
 - Host-defined synchronization primitives
 - Arena heap instead of the GC for internal allocations. VM is fully GC-free (compiler is not yet)
 - Bytecode can now be serialized into a binary buffer, significantly speeding up the launch of compiled scripts
-- Flexible exposing and integration with the D object system. Any D object that inherits from `GsObject` and implements get/set semantics for its properties can be registered in the VM. This gives scripts secure access to the application's internal state.
+- Flexible exposing and integration with the D object system. Any D object that inherits from `GsObject` and implements get/set semantics for its properties can be registered in the VM. This gives scripts secure access to the application's internal state
+- Dynamic linking of external bytecode libraries.
 
 ## Usage
 

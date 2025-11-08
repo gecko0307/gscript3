@@ -27,3 +27,4 @@ print thread.foo; // "test"
 thread.release();
 
 print global.numThreads;
+print global.numActiveThreads;

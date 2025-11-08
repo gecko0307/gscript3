@@ -46,6 +46,7 @@ enum NodeType
     BooleanLiteral,
     ArrayLiteral,
     ObjectLiteral,
+    VectorLiteral,
     FunctionLiteral,
     Function,
     Identifier,
@@ -1129,6 +1130,14 @@ class GsParser
             auto escapeExpr = new ASTNode(NodeType.EscapeExpression, "", [escapeValueExpr]);
             escapeExpr.programScope = program.peekScope();
             return escapeExpr;
+        }
+        else if (currentToken.value == "vector")
+        {
+            eat(GsTokenType.Keyword); // "vector"
+            ASTNode vectorLiteral = new ASTNode(NodeType.VectorLiteral, "", []);
+            parseList(vectorLiteral);
+            vectorLiteral.programScope = program.peekScope();
+            return vectorLiteral;
         }
         else if (currentToken.type == GsTokenType.Identifier)
         {
