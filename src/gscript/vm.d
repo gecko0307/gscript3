@@ -437,7 +437,7 @@ class GsVirtualMachine: Owner, GsObject
         }
     }
     
-    void callInThread(GsThread tr, string jumpLabel, size_t numParams)
+    void call(GsThread tr, string jumpLabel, GsDynamic[] args)
     {
         if (jumpLabel in tr.library.jumpTable)
         {
@@ -446,21 +446,30 @@ class GsVirtualMachine: Owner, GsObject
             tr.callFrame.returnLibrary = tr.library;
             
             // Push a new call frame
-            tr.cp++;
+            tr.cp = 0;
             tr.callFrame = &tr.callFrames[tr.cp];
-            for(size_t i = 0; i < numParams; i++)
+            for(size_t i = 0; i < args.length; i++)
             {
-                tr.callFrame.parameters[numParams - 1 - i] = tr.pop();
+                tr.callFrame.parameters[i] = args[i];
             }
             
-            tr.callFrame.numParameters = numParams;
-            tr.ip = tr.library.jumpTable[jumpLabel];
-            tr.callDepth++;
+            tr.callFrame.numParameters = args.length;
+            
+            auto ip = tr.library.jumpTable[jumpLabel];
+            
+            tr.start(ip, 0);
+            
+            schedule();
         }
         else
         {
             writeln("Error: unknown jump label \"", jumpLabel, "\"");
         }
+    }
+    
+    void call(string jumpLabel, GsDynamic[] args)
+    {
+        call(mainThread, jumpLabel, args);
     }
     
     void finalize()
@@ -1927,7 +1936,7 @@ class GsThread: Owner, GsObject
     
     void start(size_t initialIp = 0, size_t initialCallDepth = 1)
     {
-        if (status == GsThreadStatus.Free)
+        if (status == GsThreadStatus.Free || status == GsThreadStatus.Stopped)
         {
             ip = initialIp;
             sp = 0;
