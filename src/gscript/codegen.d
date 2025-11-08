@@ -75,7 +75,8 @@ class GsCodeGenerator
         "NativeMethod": GsDynamic(cast(double)GsDynamicType.NativeMethod),
         "NativeFunction": GsDynamic(cast(double)GsDynamicType.NativeFunction),
         "Error": GsDynamic(cast(double)GsDynamicType.Error),
-        "Function": GsDynamic(cast(double)GsDynamicType.Function)
+        "Function": GsDynamic(cast(double)GsDynamicType.Function),
+        "Vector": GsDynamic(cast(double)GsDynamicType.Vector)
     ];
     
     string[] builtins = [

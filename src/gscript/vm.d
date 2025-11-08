@@ -635,6 +635,10 @@ class GsVirtualMachine: Owner, GsObject
                             tr.push(GsDynamic(a.asNumber + b.asNumber));
                         else if (a.type == GsDynamicType.Vector && b.type == GsDynamicType.Vector)
                             tr.push(GsDynamic(a.asVector + b.asVector));
+                        else if (a.type == GsDynamicType.Vector && b.type == GsDynamicType.Number)
+                            tr.push(GsDynamic(a.asVector + GsVector(b.asNumber)));
+                        else if (a.type == GsDynamicType.Number && b.type == GsDynamicType.Vector)
+                            tr.push(GsDynamic(GsVector(b.asNumber) + b.asVector));
                         else
                         {
                             fatality("Addition of %s and %s", a.type, b.type);
@@ -647,6 +651,10 @@ class GsVirtualMachine: Owner, GsObject
                             tr.push(GsDynamic(a.asNumber - b.asNumber));
                         else if (a.type == GsDynamicType.Vector && b.type == GsDynamicType.Vector)
                             tr.push(GsDynamic(a.asVector - b.asVector));
+                        else if (a.type == GsDynamicType.Vector && b.type == GsDynamicType.Number)
+                            tr.push(GsDynamic(a.asVector - GsVector(b.asNumber)));
+                        else if (a.type == GsDynamicType.Number && b.type == GsDynamicType.Vector)
+                            tr.push(GsDynamic(GsVector(a.asNumber) - b.asVector));
                         else
                         {
                             fatality("Subtraction of %s and %s", a.type, b.type);
@@ -659,6 +667,10 @@ class GsVirtualMachine: Owner, GsObject
                             tr.push(GsDynamic(a.asNumber * b.asNumber));
                         else if (a.type == GsDynamicType.Vector && b.type == GsDynamicType.Vector)
                             tr.push(GsDynamic(a.asVector * b.asVector));
+                        else if (a.type == GsDynamicType.Vector && b.type == GsDynamicType.Number)
+                            tr.push(GsDynamic(a.asVector * GsVector(b.asNumber)));
+                        else if (a.type == GsDynamicType.Number && b.type == GsDynamicType.Vector)
+                            tr.push(GsDynamic(GsVector(a.asNumber) * b.asVector));
                         else
                         {
                             fatality("Multiplication of %s and %s", a.type, b.type);
@@ -671,6 +683,10 @@ class GsVirtualMachine: Owner, GsObject
                             tr.push(GsDynamic(a.asNumber / b.asNumber));
                         else if (a.type == GsDynamicType.Vector && b.type == GsDynamicType.Vector)
                             tr.push(GsDynamic(a.asVector / b.asVector));
+                        else if (a.type == GsDynamicType.Vector && b.type == GsDynamicType.Number)
+                            tr.push(GsDynamic(a.asVector / GsVector(b.asNumber)));
+                        else if (a.type == GsDynamicType.Number && b.type == GsDynamicType.Vector)
+                            tr.push(GsDynamic(GsVector(a.asNumber) / b.asVector));
                         else
                         {
                             fatality("Division of %s and %s", a.type, b.type);
