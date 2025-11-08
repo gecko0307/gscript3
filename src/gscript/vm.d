@@ -1000,6 +1000,22 @@ class GsVirtualMachine: Owner, GsObject
                                 break;
                             }
                         }
+                        else if (arrayParam.type == GsDynamicType.Vector)
+                        {
+                            auto v = arrayParam.asVector;
+                            if (index == 0)
+                                tr.push(GsDynamic(v.x));
+                            else if (index == 1)
+                                tr.push(GsDynamic(v.y));
+                            else if (index == 2)
+                                tr.push(GsDynamic(v.z));
+                            else if (index == 3)
+                                tr.push(GsDynamic(v.w));
+                            else
+                                fatality("Index is outside vector length");
+                            
+                            break;
+                        }
                         else if (arrayParam.type == GsDynamicType.String)
                         {
                             auto str = arrayParam.asString;
