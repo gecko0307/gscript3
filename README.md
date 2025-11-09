@@ -49,7 +49,7 @@ Most popular scripting engines are too cumbersome for embedding in languages oth
 - Array length is now returned by the built-in `length` property instead of a global `length` function
 - `print` instead of `writeln`
 - Spawning functions as threads/coroutines; see below
-- Standard math functions at the VM instruction level
+- Math intrinsics
 - AST macros; see below.
 
 Architecture improvements:
