@@ -554,32 +554,47 @@ class GsCodeGenerator
                 }
                 else
                 {
-                    size_t numParameters = node.children.length;
-                    foreach(child; node.children)
-                        instructions ~= generate(child);
                     if (globalScope.isVariableVisible(funcName))
                     {
                         // Call by global reference
+                        size_t numParameters = node.children.length;
+                        foreach(child; node.children)
+                            instructions ~= generate(child);
                         int index = globalScope.variableIndex(funcName);
                         instructions ~= GsInstruction(GsInstructionType.GLOBAL_LOAD_VAR, GsDynamic(cast(double)index));
+                        instructions ~= GsInstruction(GsInstructionType.CALL, GsDynamic(cast(double)numParameters));
                     }
                     else if (node.programScope.isVariableVisible(funcName))
                     {
                         // Call by reference
+                        size_t numParameters = node.children.length;
+                        foreach(child; node.children)
+                            instructions ~= generate(child);
                         int index = node.programScope.variableIndex(funcName);
                         instructions ~= GsInstruction(GsInstructionType.LOAD_VAR, GsDynamic(cast(double)index));
+                        instructions ~= GsInstruction(GsInstructionType.CALL, GsDynamic(cast(double)numParameters));
                     }
                     else if (node.programScope.isArgumentVisible(funcName))
                     {
                         // Call by reference
+                        size_t numParameters = node.children.length;
+                        foreach(child; node.children)
+                            instructions ~= generate(child);
                         int index = node.programScope.argumentIndex(funcName);
                         instructions ~= GsInstruction(GsInstructionType.LOAD_ARG, GsDynamic(cast(double)index));
+                        instructions ~= GsInstruction(GsInstructionType.CALL, GsDynamic(cast(double)numParameters));
                     }
                     else
                     {
-                        throw new Exception("Undefined function \"" ~ funcName ~ "\"");
+                        // Call from global
+                        size_t numParameters = node.children.length + 1;
+                        instructions ~= GsInstruction(GsInstructionType.GLOBAL);
+                        foreach(child; node.children)
+                            instructions ~= generate(child);
+                        instructions ~= GsInstruction(GsInstructionType.GLOBAL);
+                        instructions ~= GsInstruction(GsInstructionType.GET, GsDynamic(funcName));
+                        instructions ~= GsInstruction(GsInstructionType.CALL, GsDynamic(cast(double)numParameters));
                     }
-                    instructions ~= GsInstruction(GsInstructionType.CALL, GsDynamic(cast(double)numParameters));
                 }
                 break;
             
