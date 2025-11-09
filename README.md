@@ -24,6 +24,7 @@ print "Hello, World!";
 * [x] Macros, compile-time evaluation
 * [x] Bytecode modularity
 * [x] Vector type
+* [x] Math functions
 * [ ] Standard library
 
 ## Why GScript3?
@@ -48,6 +49,7 @@ Most popular scripting engines are too cumbersome for embedding in languages oth
 - Array length is now returned by the built-in `length` property instead of a global `length` function
 - `print` instead of `writeln`
 - Spawning functions as threads/coroutines; see below
+- Standard math functions at the VM instruction level
 - AST macros; see below.
 
 Architecture improvements:

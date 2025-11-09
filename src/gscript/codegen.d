@@ -83,6 +83,50 @@ class GsCodeGenerator
         "remove", "removeFront", "removeBack", "insert", "slice"
     ];
     
+    GsInstructionType[string] mathFunctions = [
+        "abs": GsInstructionType.ABS,
+        "floor": GsInstructionType.FLOOR,
+        "ceil": GsInstructionType.CEIL,
+        "round": GsInstructionType.ROUND,
+        "sign": GsInstructionType.SIGN,
+        "sqrt": GsInstructionType.SQRT,
+        "sin": GsInstructionType.SIN,
+        "cos": GsInstructionType.COS,
+        "tan": GsInstructionType.TAN,
+        "atan2": GsInstructionType.ATAN2,
+        "random": GsInstructionType.RANDOM,
+        "min": GsInstructionType.MIN,
+        "max": GsInstructionType.MAX,
+        "clamp": GsInstructionType.CLAMP,
+        "lerp": GsInstructionType.LERP,
+        "normalize": GsInstructionType.VNORM,
+        "dot": GsInstructionType.VDOT,
+        "cross": GsInstructionType.VCROSS,
+        "distance": GsInstructionType.VDIST
+    ];
+    
+    size_t[string] mathFunctionParams = [
+        "abs": 1,
+        "floor": 1,
+        "ceil": 1,
+        "round": 1,
+        "sign": 1,
+        "sqrt": 1,
+        "sin": 1,
+        "cos": 1,
+        "tan": 1,
+        "atan2": 2,
+        "random": 0,
+        "min": 2,
+        "max": 2,
+        "clamp": 3,
+        "lerp": 3,
+        "normalize": 1,
+        "dot": 2,
+        "cross": 2,
+        "distance": 2
+    ];
+    
     GsModule currentModule;
     
     auto ref macros()
@@ -510,15 +554,24 @@ class GsCodeGenerator
             case NodeType.UnaryExpression:
                 string op = node.value;
                 auto operand = node.children[0];
-                instructions ~= generate(operand);
-                if (op != "+") // unary plus is a no-op
+                if (op == "+")
                 {
-                    GsInstructionType* instrTypePtr = op in unaryOperatorMap;
-                    if (instrTypePtr)
-                        instructions ~= GsInstruction(*instrTypePtr);
-                    else
-                        throw new Exception("Unknown unary operator: " ~ op);
+                    instructions ~= generate(operand);
                 }
+                else if (op == "-")
+                {
+                    if (operand.type == NodeType.NumberLiteral)
+                    {
+                        instructions ~= GsInstruction(GsInstructionType.PUSH, GsDynamic(-(operand.value.to!double)));
+                    }
+                    else
+                    {
+                        instructions ~= generate(operand);
+                        instructions ~= GsInstruction(GsInstructionType.NEG);
+                    }
+                }
+                else
+                    throw new Exception("Unknown unary operator: " ~ op);
                 break;
             
             case NodeType.MacroFunctionExpand:
@@ -527,7 +580,20 @@ class GsCodeGenerator
             
             case NodeType.FunctionCallExpression:
                 string funcName = node.value;
-                if (funcName in macros)
+                if (funcName in mathFunctions)
+                {
+                    size_t numRequiredParams = mathFunctionParams[funcName];
+                    if (node.children.length != numRequiredParams)
+                        throw new Exception("Illegal number of parameters for primitive function \"" ~ funcName ~ "\"");
+                    if (numRequiredParams > 0)
+                    {
+                        foreach(child; node.children[0..numRequiredParams])
+                            instructions ~= generate(child);
+                    }
+                    auto mathInstrType = mathFunctions[funcName];
+                    instructions ~= GsInstruction(mathInstrType);
+                }
+                else if (funcName in macros)
                 {
                     auto macroExpr = macros[funcName];
                     if (macroExpr.type == NodeType.MemberPropertyAccessExpression)
