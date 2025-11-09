@@ -412,7 +412,9 @@ class GsCodeGenerator
                 }
                 else
                 {
-                    throw new Exception("Undefined variable \"" ~ name ~ "\"");
+                    // Implicit global get
+                    instructions ~= GsInstruction(GsInstructionType.GLOBAL);
+                    instructions ~= GsInstruction(GsInstructionType.GET, GsDynamic(name));
                 }
                 break;
             
@@ -461,7 +463,10 @@ class GsCodeGenerator
                 }
                 else
                 {
-                    throw new Exception("Undefined variable \"" ~ name ~ "\"");
+                    // Implicit global set
+                    instructions ~= GsInstruction(GsInstructionType.GLOBAL);
+                    instructions ~= GsInstruction(GsInstructionType.SET, GsDynamic(name));
+                    //throw new Exception("Undefined variable \"" ~ name ~ "\"");
                 }
                 break;
             
@@ -525,18 +530,6 @@ class GsCodeGenerator
                 if (funcName in macros)
                 {
                     auto macroExpr = macros[funcName];
-                    /*
-                    if (macroExpr.type == NodeType.FunctionLiteral)
-                    {
-                        auto func = cast(ASTFunctionLiteral)macroExpr;
-                        size_t numParameters = node.children.length;
-                        foreach(child; node.children)
-                            instructions ~= generate(child);
-                        instructions ~= GsInstruction(GsInstructionType.PUSH, GsDynamic(func.label));
-                        instructions ~= GsInstruction(GsInstructionType.CALL, GsDynamic(cast(double)numParameters));
-                    }
-                    else
-                    */
                     if (macroExpr.type == NodeType.MemberPropertyAccessExpression)
                     {
                         ASTNode leftExpr = macroExpr.children[0];
@@ -585,9 +578,6 @@ class GsCodeGenerator
                     else
                     {
                         throw new Exception("Undefined function \"" ~ funcName ~ "\"");
-                        
-                        // Call funcName directly
-                        //instructions ~= GsInstruction(GsInstructionType.PUSH, GsDynamic(funcName));
                     }
                     instructions ~= GsInstruction(GsInstructionType.CALL, GsDynamic(cast(double)numParameters));
                 }
