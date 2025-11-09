@@ -688,3 +688,26 @@ link "libtest.gsc" as libtest;
 
 print libtest.sqr(10);
 ```
+
+## Intrinsics
+
+Some built-in functions of the language are compiler intrinsics: they are expanded into special VM instructions:
+
+- `abs(x)`
+- `clamp(x, min, max)`
+- `min(a, b)`
+- `max(a, b)`
+- `floor(x)`
+- `ceil(x)`
+- `round(x)`
+- `sqrt(x)`
+- `sin(x)`
+- `cos(x)`
+- `tan(x)`
+- `atan2(y, x)`
+- `random()`
+- `lerp(a, b, t)`
+- `dot(a, b)`
+- `cross(a, b)`
+- `normalize(v)`
+- `distance(a, b)`

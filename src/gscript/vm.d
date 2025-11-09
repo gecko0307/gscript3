@@ -1819,6 +1819,15 @@ class GsVirtualMachine: Owner, GsObject
                         }
                         tr.push(GsDynamic(cos(v.asNumber)));
                         break;
+                    case GsInstructionType.TAN:
+                        auto v = tr.pop();
+                        if (v.type != GsDynamicType.Number)
+                        {
+                            fatality("Unsupported argument type for \"tan\": %s", v.type);
+                            break;
+                        }
+                        tr.push(GsDynamic(tan(v.asNumber)));
+                        break;
                     case GsInstructionType.ATAN2:
                         auto x = tr.pop();
                         auto y = tr.pop();
