@@ -1979,6 +1979,49 @@ class GsVirtualMachine: Owner, GsObject
                         auto vec2 = v2.asVector.toVector3f;
                         tr.push(GsDynamic(distance(vec1, vec2)));
                         break;
+                    case GsInstructionType.CONV:
+                        GsDynamicType convType = cast(GsDynamicType)cast(uint)instruction.operand.asNumber;
+                        if (convType == GsDynamicType.String)
+                        {
+                            auto v = tr.pop();
+                            if (v.type == GsDynamicType.Number)
+                                tr.push(GsDynamic(tr.heap.format("%f", v.asNumber)));
+                            else
+                                tr.push(GsDynamic(v.toString));
+                        }
+                        else if (convType == GsDynamicType.Number)
+                        {
+                            auto v = tr.pop();
+                            if (v.type == GsDynamicType.String)
+                                tr.push(GsDynamic(parse!double(v.asString)));
+                            else if (v.type == GsDynamicType.Null)
+                                tr.push(GsDynamic(0.0));
+                            else if (v.type == GsDynamicType.Number)
+                                tr.push(v);
+                            else
+                            {
+                                fatality("Illegal type conversion: %s to %s", v.type, convType);
+                                break;
+                            }
+                        }
+                        else
+                        {
+                            fatality("Illegal type conversion: %s", convType);
+                        }
+                        break;
+                    case GsInstructionType.CHR:
+                        auto v = tr.pop();
+                        if (v.type == GsDynamicType.Number)
+                        {
+                            char[] s = tr.heap.allocateString(1);
+                            s[0] = cast(char)v.asNumber;
+                            tr.push(GsDynamic(cast(string)s));
+                        }
+                        else
+                        {
+                            fatality("Illegal parameter type for \"chr\": %s", v.type);
+                        }
+                        break;
                     case GsInstructionType.HALT:
                         tr.finalize();
                         break;

@@ -689,6 +689,10 @@ link "libtest.gsc" as libtest;
 print libtest.sqr(10);
 ```
 
+## Standard Library
+
+TODO
+
 ## Intrinsics
 
 Some built-in functions of the language are compiler intrinsics: they are expanded into special VM instructions:

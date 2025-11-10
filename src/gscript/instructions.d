@@ -118,7 +118,9 @@ enum GsInstructionType: ubyte
     VNORM = 81,         // pop a vector and push its normal
     VDOT = 82,          // pop two vectors and push their dot-product
     VCROSS = 83,        // pop two vectors and push their cross-product
-    VDIST = 84          // pop two vectors and push the distance between them
+    VDIST = 84,         // pop two vectors and push the distance between them
+    CONV = 85,          // CONV "T" - pops a value, converts it to the given type and pushes
+    CHR = 86            //
 }
 
 enum GsOperandType: ubyte

@@ -37,6 +37,12 @@ import gscript.instructions;
 import gscript.dynamic;
 import gscript.arena;
 
+struct GsIntrinsic
+{
+    GsInstruction[] code;
+    size_t numParams;
+}
+
 class GsCodeGenerator
 {
     GsInstructionType[string] binaryOperatorMap = [
@@ -83,48 +89,29 @@ class GsCodeGenerator
         "remove", "removeFront", "removeBack", "insert", "slice"
     ];
     
-    GsInstructionType[string] mathFunctions = [
-        "abs": GsInstructionType.ABS,
-        "floor": GsInstructionType.FLOOR,
-        "ceil": GsInstructionType.CEIL,
-        "round": GsInstructionType.ROUND,
-        "sign": GsInstructionType.SIGN,
-        "sqrt": GsInstructionType.SQRT,
-        "sin": GsInstructionType.SIN,
-        "cos": GsInstructionType.COS,
-        "tan": GsInstructionType.TAN,
-        "atan2": GsInstructionType.ATAN2,
-        "random": GsInstructionType.RANDOM,
-        "min": GsInstructionType.MIN,
-        "max": GsInstructionType.MAX,
-        "clamp": GsInstructionType.CLAMP,
-        "lerp": GsInstructionType.LERP,
-        "normalize": GsInstructionType.VNORM,
-        "dot": GsInstructionType.VDOT,
-        "cross": GsInstructionType.VCROSS,
-        "distance": GsInstructionType.VDIST
-    ];
-    
-    size_t[string] mathFunctionParams = [
-        "abs": 1,
-        "floor": 1,
-        "ceil": 1,
-        "round": 1,
-        "sign": 1,
-        "sqrt": 1,
-        "sin": 1,
-        "cos": 1,
-        "tan": 1,
-        "atan2": 2,
-        "random": 0,
-        "min": 2,
-        "max": 2,
-        "clamp": 3,
-        "lerp": 3,
-        "normalize": 1,
-        "dot": 2,
-        "cross": 2,
-        "distance": 2
+    GsIntrinsic[string] intrinsics = [
+        "string":GsIntrinsic([GsInstruction(GsInstructionType.CONV, GsDynamic(GsDynamicType.String))], 1),
+        "number":GsIntrinsic([GsInstruction(GsInstructionType.CONV, GsDynamic(GsDynamicType.Number))], 1),
+        "chr":   GsIntrinsic([GsInstruction(GsInstructionType.CHR)], 1),
+        "abs":   GsIntrinsic([GsInstruction(GsInstructionType.ABS)], 1),
+        "floor": GsIntrinsic([GsInstruction(GsInstructionType.FLOOR)], 1),
+        "ceil":  GsIntrinsic([GsInstruction(GsInstructionType.CEIL)], 1),
+        "round": GsIntrinsic([GsInstruction(GsInstructionType.ROUND)], 1),
+        "sign":  GsIntrinsic([GsInstruction(GsInstructionType.SIGN)], 1),
+        "sqrt":  GsIntrinsic([GsInstruction(GsInstructionType.SQRT)], 1),
+        "sin":   GsIntrinsic([GsInstruction(GsInstructionType.SIN)], 1),
+        "cos":   GsIntrinsic([GsInstruction(GsInstructionType.COS)], 1),
+        "tan":   GsIntrinsic([GsInstruction(GsInstructionType.TAN)], 1),
+        "atan2": GsIntrinsic([GsInstruction(GsInstructionType.ATAN2)], 2),
+        "random":GsIntrinsic([GsInstruction(GsInstructionType.RANDOM)], 0),
+        "min":   GsIntrinsic([GsInstruction(GsInstructionType.MIN)], 2),
+        "max":   GsIntrinsic([GsInstruction(GsInstructionType.MAX)], 2),
+        "clamp": GsIntrinsic([GsInstruction(GsInstructionType.CLAMP)], 3),
+        "lerp":  GsIntrinsic([GsInstruction(GsInstructionType.LERP)], 3),
+        "normalize": GsIntrinsic([GsInstruction(GsInstructionType.VNORM)], 1),
+        "dot":   GsIntrinsic([GsInstruction(GsInstructionType.VDOT)], 2),
+        "cross": GsIntrinsic([GsInstruction(GsInstructionType.VCROSS)], 2),
+        "cross": GsIntrinsic([GsInstruction(GsInstructionType.VDIST)], 2)
     ];
     
     GsModule currentModule;
@@ -580,18 +567,19 @@ class GsCodeGenerator
             
             case NodeType.FunctionCallExpression:
                 string funcName = node.value;
-                if (funcName in mathFunctions)
+                if (funcName in intrinsics)
                 {
-                    size_t numRequiredParams = mathFunctionParams[funcName];
+                    auto intrinsic = intrinsics[funcName];
+                    size_t numRequiredParams = intrinsic.numParams;
                     if (node.children.length != numRequiredParams)
-                        throw new Exception("Illegal number of parameters for primitive function \"" ~ funcName ~ "\"");
+                        throw new Exception("Illegal number of parameters for intrinsic \"" ~ funcName ~ "\"");
                     if (numRequiredParams > 0)
                     {
                         foreach(child; node.children[0..numRequiredParams])
                             instructions ~= generate(child);
                     }
-                    auto mathInstrType = mathFunctions[funcName];
-                    instructions ~= GsInstruction(mathInstrType);
+                    //auto mathInstrType = intrinsics[funcName];
+                    instructions ~= intrinsic.code;
                 }
                 else if (funcName in macros)
                 {
