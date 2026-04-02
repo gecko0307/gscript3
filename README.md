@@ -1,8 +1,6 @@
 # GScript3
 
-Work-in-progress third iteration of GScript, a mini scripting language written in D.
-
-GScript3 is a concurrent dynamically-typed language aimed at easy embedding and extending.
+GScript3 is a concurrent dynamically-typed scripting language for D aimed at easy embedding and extending.
 
 ```
 print "Hello, World!";
