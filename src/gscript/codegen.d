@@ -111,7 +111,7 @@ class GsCodeGenerator
         "normalize": GsIntrinsic([GsInstruction(GsInstructionType.VNORM)], 1),
         "dot":   GsIntrinsic([GsInstruction(GsInstructionType.VDOT)], 2),
         "cross": GsIntrinsic([GsInstruction(GsInstructionType.VCROSS)], 2),
-        "cross": GsIntrinsic([GsInstruction(GsInstructionType.VDIST)], 2)
+        "distance": GsIntrinsic([GsInstruction(GsInstructionType.VDIST)], 2)
     ];
     
     GsModule currentModule;
