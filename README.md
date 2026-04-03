@@ -6,30 +6,11 @@ GScript3 is a concurrent dynamically-typed scripting language for D aimed at eas
 print "Hello, World!";
 ```
 
-## Development Roadmap
-* [x] VM
-* [x] Parser
-* [x] Codegen
-* [x] Bytecode serializer
-* [x] External state access
-* [x] Arena heap
-* [x] VM builtins
-* [x] Multithreading
-* [x] Channels
-* [x] Basic build system
-* [x] Expose command line arguments
-* [x] Error handling
-* [x] Macros, compile-time evaluation
-* [x] Bytecode modularity
-* [x] Vector type
-* [x] Math functions
-* [ ] Standard library
-
 ## Why GScript3?
 Most popular scripting engines are too cumbersome for embedding in languages other than C/C++. They also come with lots of architectural quirks, heavy runtimes and verbose APIs. GScript3 is designed to be:
 - **Simple** - easy to embed into any D application with minimal effort, as well as to "compile" into standalone executables;
 - **Lightweight** - a minimalistic VM with no hidden GC costs;
-- **Concurrent** - built-in green threads, coroutines, and channels;
+- **Concurrent** - built-in green threads/coroutines;
 - **Extensible** - enables host applications to expose their functions and define specialized runtime objects;
 - **Familiar** - concise, JavaScript-like syntax.
 
@@ -45,7 +26,6 @@ Most popular scripting engines are too cumbersome for embedding in languages oth
 - New variadic arguments system; see below
 - Implicit function referencing. Function reference is created without `ref` keyword
 - Array length is now returned by the built-in `length` property instead of a global `length` function
-- `print` instead of `writeln`
 - Spawning functions as threads/coroutines; see below
 - Math intrinsics
 - AST macros; see below.
@@ -77,7 +57,9 @@ GScript3 interpreter automatically compiles scripts to a bytecode file (*.gsc). 
 
 `gs -i script.gsc`
 
-The interpreter automatically loads and runs `main.gs` or `main.gsc` file from the executable directory if you don't specify an input file. So you can ship `gs` executable with `main.gsc` bytecode file to end users. Alternatively, you can pack the bytecode with `gsrunner` into a single executable using the `--build` command:
+The interpreter automatically loads and runs `main.gs` or `main.gsc` file from the executable directory if you don't specify an input file. So you can ship `gs` executable with `main.gsc` bytecode file to end users.
+
+Alternatively, you can pack the bytecode with `gsrunner` into a single executable using the `--build` command:
 
 `gs --build` or `gs -b`
 
