@@ -557,6 +557,11 @@ class GsCodeGenerator
                         instructions ~= GsInstruction(GsInstructionType.NEG);
                     }
                 }
+                else if (op == "!")
+                {
+                    instructions ~= generate(operand);
+                    instructions ~= GsInstruction(GsInstructionType.NOT);
+                }
                 else
                     throw new Exception("Unknown unary operator: " ~ op);
                 break;
