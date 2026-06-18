@@ -14,15 +14,15 @@
     "importPaths": ["src"],
     "subPackages": [
         {
-            "name": "gs",
+            "name": "gscript",
             "targetType": "executable",
-            "targetName": "gs",
+            "targetName": "gscript",
             "dependencies": {
                 "dlib": "~>1.4.1"
             },
-            "sourcePaths": ["src", "tools/gs"],
-            "importPaths": ["src", "tools/gs"],
-            "mainSourceFile": "tools/gs/main.d",
+            "sourcePaths": ["src", "tools/gscript"],
+            "importPaths": ["src", "toolsgscript"],
+            "mainSourceFile": "tools/gscript/main.d",
             "buildRequirements":[
                 "allowWarnings"
             ]

@@ -41,27 +41,27 @@ Architecture improvements:
 
 ## Usage
 
-Gscript3 interpreter comes in two forms - `gs` and `gsrunner`.
-- `gs` is the main command line tool to run and compile scripts;
+Gscript3 interpreter comes in two forms - `gscript` and `gsrunner`.
+- `gscript` is the main command line tool to run and compile scripts;
 - `gsrunner` is a runtime stub used to distribute standalone applications packed with compiled bytecode.
 
 Running a script:
 
-`gs -i script.gs`
+`gscript -i script.gs`
 
 Compiling a script without running:
 
-`gs -c -i script.gs`
+`gscript -c -i script.gs`
 
 GScript3 interpreter automatically compiles scripts to a bytecode file (*.gsc). It can be executed instead of the script itself:
 
-`gs -i script.gsc`
+`gscript -i script.gsc`
 
 The interpreter automatically loads and runs `main.gs` or `main.gsc` file from the executable directory if you don't specify an input file. So you can ship `gs` executable with `main.gsc` bytecode file to end users.
 
 Alternatively, you can pack the bytecode with `gsrunner` into a single executable using the `--build` command:
 
-`gs --build` or `gs -b`
+`gscript --build` or `gs -b`
 
 This requires project config `gsproject.json` that looks like this:
 
