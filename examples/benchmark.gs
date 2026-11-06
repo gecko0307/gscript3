@@ -12,7 +12,7 @@ func threadFunc(self, index)
 let i = 0;
 let bi = 0;
 let t;
-let batch = array(1000000);
+let batch = array(100);
 while(i < 1000000)
 {
     print i;
